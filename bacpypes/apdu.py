@@ -3,7 +3,7 @@
 """
 Application Layer Protocol Data Units
 """
-
+import logging
 from .errors import DecodingError, TooManyArguments
 
 from .pdu import PCI, PDUData
@@ -17,6 +17,8 @@ from .basetypes import ChannelValue, DateTime, DeviceAddress, ErrorType, \
     PropertyIdentifier, PropertyReference, PropertyValue, RecipientProcess, \
     ResultFlags, Segmentation, TimeStamp, VTClass
 
+
+_logger = logging.getLogger(__name__)
 
 # a dictionary of message type values and classes
 apdu_types = {}

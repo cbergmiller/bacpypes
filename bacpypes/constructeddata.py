@@ -5,7 +5,7 @@ Constructed Data
 """
 
 import sys
-
+import logging
 from .errors import DecodingError, \
     MissingRequiredParameter, InvalidParameterDatatype, InvalidTag
 from .debugging import ModuleLogger, bacpypes_debugging
@@ -14,47 +14,41 @@ from .primitivedata import Atomic, ClosingTag, OpeningTag, Tag, TagList, \
     Unsigned
 
 # some debugging
-_debug = 0
-_log = ModuleLogger(globals())
+_logger = logging.getLogger(__name__)
 
-#
-#   Element
-#
 
 class Element:
+    """
+    Element
+    """
 
-    def __init__(self, name, klass, context=None, optional=False):
+    def __init__(self, name, cls, context=None, optional=False):
         self.name = name
-        self.klass = klass
+        self.cls = cls
         self.context = context
         self.optional = optional
 
     def __repr__(self):
-        desc = "%s(%s" % (self.__class__.__name__, self.name)
-        desc += " " + self.klass.__name__
+        desc = f'{self.__class__.__name__}({self.name} {self.cls.__name__}'
         if self.context is not None:
-            desc += ", context=%r" % (self.context,)
+            desc += f', context={self.context!r}'
         if self.optional:
-            desc += ", optional"
-        desc += ")"
+            desc += ', optional'
+        desc += ')'
+        return desc
 
-        return '<' + desc + ' instance at 0x%08x' % (id(self),) + '>'
 
-#
-#   Sequence
-#
-
-@bacpypes_debugging
 class Sequence(object):
-
+    """
+    Sequence
+    """
     sequenceElements = []
 
     def __init__(self, *args, **kwargs):
         """
         Create a sequence element, optionally providing attribute/property values.
         """
-        if _debug: Sequence._debug("__init__ %r %r", args, kwargs)
-
+        _logger.debug("__init__ %r %r", args, kwargs)
         # split out the keyword arguments that belong to this class
         my_kwargs = {}
         other_kwargs = {}
@@ -64,12 +58,8 @@ class Sequence(object):
         for kw in kwargs:
             if kw not in my_kwargs:
                 other_kwargs[kw] = kwargs[kw]
-        if _debug: Sequence._debug("    - my_kwargs: %r", my_kwargs)
-        if _debug: Sequence._debug("    - other_kwargs: %r", other_kwargs)
-
-        # call some superclass, if there is one
-        super(Sequence, self).__init__(*args, **other_kwargs)
-
+        _logger.debug("    - my_kwargs: %r", my_kwargs)
+        _logger.debug("    - other_kwargs: %r", other_kwargs)
         # set the attribute/property values for the ones provided
         for element in self.sequenceElements:
             setattr(self, element.name, my_kwargs.get(element.name, None))
@@ -77,119 +67,103 @@ class Sequence(object):
     def encode(self, taglist):
         """
         """
-        if _debug: Sequence._debug("encode %r", taglist)
+        _logger.debug(f"encode {taglist}")
         global _sequence_of_classes
-
         # make sure we're dealing with a tag list
         if not isinstance(taglist, TagList):
             raise TypeError("TagList expected")
-
         for element in self.sequenceElements:
             value = getattr(self, element.name, None)
             if element.optional and value is None:
                 continue
             if not element.optional and value is None:
-                raise MissingRequiredParameter("%s is a missing required element of %s" % (element.name, self.__class__.__name__))
-            if element.klass in _sequence_of_classes:
+                raise MissingRequiredParameter(
+                    "%s is a missing required element of %s" % (element.name, self.__class__.__name__))
+            if element.cls in _sequence_of_classes:
                 # might need to encode an opening tag
                 if element.context is not None:
                     taglist.append(OpeningTag(element.context))
-
-                if _debug: Sequence._debug("    - build sequence helper: %r %r", element.klass, value)
-                helper = element.klass(value)
-
+                _logger.debug("    - build sequence helper: %r %r", element.cls, value)
+                helper = element.cls(value)
                 # encode the value
                 helper.encode(taglist)
-
                 # might need to encode a closing tag
                 if element.context is not None:
                     taglist.append(ClosingTag(element.context))
-            elif issubclass(element.klass, (Atomic, AnyAtomic)):
+            elif issubclass(element.cls, (Atomic, AnyAtomic)):
                 # a helper cooperates between the atomic value and the tag
-                if _debug: Sequence._debug("    - build helper: %r %r", element.klass, value)
-                helper = element.klass(value)
-
+                _logger.debug("    - build helper: %r %r", element.cls, value)
+                helper = element.cls(value)
                 # build a tag and encode the data into it
                 tag = Tag()
                 helper.encode(tag)
-
                 # convert it to context encoding iff necessary
                 if element.context is not None:
                     tag = tag.app_to_context(element.context)
-
                 # now append the tag
                 taglist.append(tag)
-            elif isinstance(value, element.klass):
+            elif isinstance(value, element.cls):
                 # might need to encode an opening tag
                 if element.context is not None:
                     taglist.append(OpeningTag(element.context))
-
                 # encode the value
                 value.encode(taglist)
-
                 # might need to encode a closing tag
                 if element.context is not None:
                     taglist.append(ClosingTag(element.context))
             else:
-                raise TypeError("%s must be of type %s" % (element.name, element.klass.__name__))
+                raise TypeError("%s must be of type %s" % (element.name, element.cls.__name__))
 
     def decode(self, taglist):
-        if _debug: Sequence._debug("decode %r", taglist)
-
+        _logger.debug("decode %r", taglist)
         # make sure we're dealing with a tag list
         if not isinstance(taglist, TagList):
             raise TypeError("TagList expected")
-
         for element in self.sequenceElements:
             tag = taglist.Peek()
-
             # no more elements
             if tag is None:
                 if element.optional:
                     # omitted optional element
                     setattr(self, element.name, None)
-                elif element.klass in _sequence_of_classes:
+                elif element.cls in _sequence_of_classes:
                     # empty list
                     setattr(self, element.name, [])
                 else:
-                    raise MissingRequiredParameter("%s is a missing required element of %s" % (element.name, self.__class__.__name__))
-
+                    raise MissingRequiredParameter(
+                        "%s is a missing required element of %s" % (element.name, self.__class__.__name__))
             # we have been enclosed in a context
             elif tag.tagClass == Tag.closingTagClass:
                 if not element.optional:
-                    raise MissingRequiredParameter("%s is a missing required element of %s" % (element.name, self.__class__.__name__))
-
+                    raise MissingRequiredParameter(
+                        "%s is a missing required element of %s" % (element.name, self.__class__.__name__))
                 # omitted optional element
                 setattr(self, element.name, None)
-
             # check for a sequence element
-            elif element.klass in _sequence_of_classes:
+            elif element.cls in _sequence_of_classes:
                 # check for context encoding
                 if element.context is not None:
                     if tag.tagClass != Tag.openingTagClass or tag.tagNumber != element.context:
                         if not element.optional:
-                            raise MissingRequiredParameter("%s expected opening tag %d" % (element.name, element.context))
+                            raise MissingRequiredParameter(
+                                "%s expected opening tag %d" % (element.name, element.context))
                         else:
                             # omitted optional element
                             setattr(self, element.name, [])
                             continue
                     taglist.Pop()
-
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass()
+                helper = element.cls()
                 helper.decode(taglist)
-
                 # now save the value
                 setattr(self, element.name, helper.value)
-
                 # check for context closing tag
                 if element.context is not None:
                     tag = taglist.Pop()
                     if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                         raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
-
             # check for an atomic element
-            elif issubclass(element.klass, Atomic):
+            elif issubclass(element.cls, Atomic):
                 # convert it to application encoding
                 if element.context is not None:
                     if tag.tagClass != Tag.contextTagClass or tag.tagNumber != element.context:
@@ -198,26 +172,23 @@ class Sequence(object):
                         else:
                             setattr(self, element.name, None)
                             continue
-                    tag = tag.context_to_app(element.klass._app_tag)
+                    tag = tag.context_to_app(element.cls._app_tag)
                 else:
-                    if tag.tagClass != Tag.applicationTagClass or tag.tagNumber != element.klass._app_tag:
+                    if tag.tagClass != Tag.applicationTagClass or tag.tagNumber != element.cls._app_tag:
                         if not element.optional:
-                            raise InvalidParameterDatatype("%s expected application tag %s" % (element.name, Tag._app_tag_name[element.klass._app_tag]))
+                            raise InvalidParameterDatatype("%s expected application tag %s" % (
+                            element.name, Tag._app_tag_name[element.cls._app_tag]))
                         else:
                             setattr(self, element.name, None)
                             continue
-
                 # consume the tag
                 taglist.Pop()
-
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass(tag)
-
+                helper = element.cls(tag)
                 # now save the value
                 setattr(self, element.name, helper.value)
-
             # check for an AnyAtomic element
-            elif issubclass(element.klass, AnyAtomic):
+            elif issubclass(element.cls, AnyAtomic):
                 # convert it to application encoding
                 if element.context is not None:
                     if tag.tagClass != Tag.contextTagClass or tag.tagNumber != element.context:
@@ -226,7 +197,7 @@ class Sequence(object):
                         else:
                             setattr(self, element.name, None)
                             continue
-                    tag = tag.context_to_app(element.klass._app_tag)
+                    tag = tag.context_to_app(element.cls._app_tag)
                 else:
                     if tag.tagClass != Tag.applicationTagClass:
                         if not element.optional:
@@ -234,16 +205,12 @@ class Sequence(object):
                         else:
                             setattr(self, element.name, None)
                             continue
-
                 # consume the tag
                 taglist.Pop()
-
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass(tag)
-
+                helper = element.cls(tag)
                 # now save the value
                 setattr(self, element.name, helper.value)
-
             # some kind of structure
             else:
                 if element.context is not None:
@@ -254,7 +221,6 @@ class Sequence(object):
                             setattr(self, element.name, None)
                             continue
                     taglist.Pop()
-
                 try:
                     # make a backup of the tag list in case the structure manages to
                     # decode some content but not all of it.  This is not supposed to
@@ -262,9 +228,8 @@ class Sequence(object):
                     backup = taglist.tagList[:]
 
                     # build a value and decode it
-                    value = element.klass()
+                    value = element.cls()
                     value.decode(taglist)
-
                     # save the result
                     setattr(self, element.name, value)
                 except (DecodingError, InvalidTag) as err:
@@ -273,12 +238,10 @@ class Sequence(object):
                     if element.context is None and element.optional:
                         # omitted optional element
                         setattr(self, element.name, None)
-
                         # restore the backup
                         taglist.tagList = backup
                     else:
                         raise
-
                 if element.context is not None:
                     tag = taglist.Pop()
                     if (not tag) or tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
@@ -286,103 +249,88 @@ class Sequence(object):
 
     def debug_contents(self, indent=1, file=sys.stdout, _ids=None):
         global _sequence_of_classes
-
         for element in self.sequenceElements:
             value = getattr(self, element.name, None)
             if element.optional and value is None:
                 continue
             if not element.optional and value is None:
-                file.write("%s%s is a missing required element of %s\n" % ("    " * indent, element.name, self.__class__.__name__))
+                file.write("%s%s is a missing required element of %s\n" % (
+                "    " * indent, element.name, self.__class__.__name__))
                 continue
-
-            if element.klass in _sequence_of_classes:
+            if element.cls in _sequence_of_classes:
                 file.write("%s%s\n" % ("    " * indent, element.name))
-                helper = element.klass(value)
-                helper.debug_contents(indent+1, file, _ids)
+                helper = element.cls(value)
+                helper.debug_contents(indent + 1, file, _ids)
 
-            elif issubclass(element.klass, (Atomic, AnyAtomic)):
+            elif issubclass(element.cls, (Atomic, AnyAtomic)):
                 file.write("%s%s = %r\n" % ("    " * indent, element.name, value))
 
-            elif isinstance(value, element.klass):
+            elif isinstance(value, element.cls):
                 file.write("%s%s\n" % ("    " * indent, element.name))
-                value.debug_contents(indent+1, file, _ids)
+                value.debug_contents(indent + 1, file, _ids)
 
             else:
-                file.write("%s%s must be a %s\n" % ("    " * indent, element.name, element.klass.__name__))
+                file.write("%s%s must be a %s\n" % ("    " * indent, element.name, element.cls.__name__))
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if _debug: Sequence._debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
-
+        _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # loop through the elements
         for element in self.sequenceElements:
             value = getattr(self, element.name, None)
             if value is None:
                 continue
-
-            if element.klass in _sequence_of_classes:
-                helper = element.klass(value)
+            if element.cls in _sequence_of_classes:
+                helper = element.cls(value)
                 mapped_value = helper.dict_contents(as_class=as_class)
-
-            elif issubclass(element.klass, Atomic):
-                mapped_value = value                        ### ambiguous
-
-            elif issubclass(element.klass, AnyAtomic):
-                mapped_value = value.value                  ### ambiguous
-
-            elif isinstance(value, element.klass):
+            elif issubclass(element.cls, Atomic):
+                mapped_value = value  ### ambiguous
+            elif issubclass(element.cls, AnyAtomic):
+                mapped_value = value.value  ### ambiguous
+            elif isinstance(value, element.cls):
                 mapped_value = value.dict_contents(as_class=as_class)
                 use_dict.__setitem__(element.name, mapped_value)
-
             else:
                 continue
-
             # update the dictionary being built
             use_dict.__setitem__(element.name, mapped_value)
-
         # return what we built/updated
         return use_dict
 
-#
-#   SequenceOf
-#
 
 _sequence_of_map = {}
 _sequence_of_classes = {}
 
-@bacpypes_debugging
-def SequenceOf(klass):
+
+def SequenceOf(cls):
     """Function to return a class that can encode and decode a list of
     some other type."""
-    if _debug: SequenceOf._debug("SequenceOf %r", klass)
+    _logger.debug("SequenceOf %r", cls)
 
     global _sequence_of_map
     global _sequence_of_classes, _array_of_classes
 
     # if this has already been built, return the cached one
-    if klass in _sequence_of_map:
-        if _debug: SequenceOf._debug("    - found in cache")
-        return _sequence_of_map[klass]
+    if cls in _sequence_of_map:
+        _logger.debug("    - found in cache")
+        return _sequence_of_map[cls]
 
     # no SequenceOf(SequenceOf(...)) allowed
-    if klass in _sequence_of_classes:
+    if cls in _sequence_of_classes:
         raise TypeError("nested sequences disallowed")
     # no SequenceOf(ArrayOf(...)) allowed
-    if klass in _array_of_classes:
+    if cls in _array_of_classes:
         raise TypeError("sequences of arrays disallowed")
 
     # define a generic class for lists
-    @bacpypes_debugging
     class _SequenceOf:
-
         subtype = None
 
         def __init__(self, value=None):
-            if _debug: _SequenceOf._debug("(%r)__init__ %r (subtype=%r)", self.__class__.__name__, value, self.subtype)
+            _logger.debug("(%r)__init__ %r (subtype=%r)", self.__class__.__name__, value, self.subtype)
 
             if value is None:
                 self.value = []
@@ -407,16 +355,14 @@ def SequenceOf(klass):
             return self.value[item]
 
         def encode(self, taglist):
-            if _debug: _SequenceOf._debug("(%r)encode %r", self.__class__.__name__, taglist)
+            _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
             for value in self.value:
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(value)
-
                     # build a tag and encode the data into it
                     tag = Tag()
                     helper.encode(tag)
-
                     # now encode the tag
                     taglist.append(tag)
                 elif isinstance(value, self.subtype):
@@ -426,30 +372,24 @@ def SequenceOf(klass):
                     raise TypeError("%s must be a %s" % (value, self.subtype.__name__))
 
         def decode(self, taglist):
-            if _debug: _SequenceOf._debug("(%r)decode %r", self.__class__.__name__, taglist)
-
+            _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
             while len(taglist) != 0:
                 tag = taglist.Peek()
                 if tag.tagClass == Tag.closingTagClass:
                     return
-
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
-                    if _debug: _SequenceOf._debug("    - building helper: %r %r", self.subtype, tag)
+                    _logger.debug("    - building helper: %r %r", self.subtype, tag)
                     taglist.Pop()
-
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(tag)
-
                     # save the value
                     self.value.append(helper.value)
                 else:
-                    if _debug: _SequenceOf._debug("    - building value: %r", self.subtype)
+                    _logger.debug("    - building value: %r", self.subtype)
                     # build an element
                     value = self.subtype()
-
                     # let it decode itself
                     value.decode(taglist)
-
                     # save what was built
                     self.value.append(value)
 
@@ -460,7 +400,7 @@ def SequenceOf(klass):
                     file.write("%s[%d] = %r\n" % ("    " * indent, i, value))
                 elif isinstance(value, self.subtype):
                     file.write("%s[%d]" % ("    " * indent, i))
-                    value.debug_contents(indent+1, file, _ids)
+                    value.debug_contents(indent + 1, file, _ids)
                 else:
                     file.write("%s[%d] %s must be a %s" % ("    " * indent, i, value, self.subtype.__name__))
                 i += 1
@@ -471,9 +411,9 @@ def SequenceOf(klass):
 
             for value in self.value:
                 if issubclass(self.subtype, Atomic):
-                    mapped_value.append(value)              ### ambiguous
+                    mapped_value.append(value)  ### ambiguous
                 elif issubclass(self.subtype, AnyAtomic):
-                    mapped_value.append(value.value)        ### ambiguous
+                    mapped_value.append(value.value)  ### ambiguous
                 elif isinstance(value, self.subtype):
                     mapped_value.append(value.dict_contents(as_class=as_class))
 
@@ -481,53 +421,49 @@ def SequenceOf(klass):
             return mapped_value
 
     # constrain it to a list of a specific type of item
-    setattr(_SequenceOf, 'subtype', klass)
-    _SequenceOf.__name__ = 'SequenceOf' + klass.__name__
-    if _debug: SequenceOf._debug("    - build this class: %r", _SequenceOf)
-
+    setattr(_SequenceOf, 'subtype', cls)
+    _SequenceOf.__name__ = 'SequenceOf' + cls.__name__
+    _logger.debug("    - build this class: %r", _SequenceOf)
     # cache this type
-    _sequence_of_map[klass] = _SequenceOf
+    _sequence_of_map[cls] = _SequenceOf
     _sequence_of_classes[_SequenceOf] = 1
-
     # return this new type
     return _SequenceOf
 
-#
-#   Array
-#
-#   Arrays of things are a derived class of Array to make it easier to check
-#   to see if a property is an array of something.
-#
 
 class Array(object):
+    """
+    Array
+    Arrays of things are a derived class of Array to make it easier to check
+    to see if a property is an array of something.
+    """
     pass
 
-#
-#   ArrayOf
-#
 
 _array_of_map = {}
 _array_of_classes = {}
 
-def ArrayOf(klass):
-    """Function to return a class that can encode and decode a list of
-    some other type."""
+
+def ArrayOf(cls):
+    """
+    ArrayOf
+    Function to return a class that can encode and decode a list of some other type.
+    """
     global _array_of_map
     global _array_of_classes, _sequence_of_classes
 
     # if this has already been built, return the cached one
-    if klass in _array_of_map:
-        return _array_of_map[klass]
+    if cls in _array_of_map:
+        return _array_of_map[cls]
 
     # no ArrayOf(ArrayOf(...)) allowed
-    if klass in _array_of_classes:
+    if cls in _array_of_classes:
         raise TypeError("nested arrays disallowed")
     # no ArrayOf(SequenceOf(...)) allowed
-    if klass in _sequence_of_classes:
+    if cls in _sequence_of_classes:
         raise TypeError("arrays of SequenceOf disallowed")
 
     # define a generic class for arrays
-    @bacpypes_debugging
     class ArrayOf(Array):
 
         subtype = None
@@ -574,7 +510,7 @@ def ArrayOf(klass):
                 elif value > self.value[0]:
                     # extend
                     if issubclass(self.subtype, Atomic):
-                        self.value.extend( [self.subtype().value] * (value - self.value[0]) )
+                        self.value.extend([self.subtype().value] * (value - self.value[0]))
                     else:
                         for i in range(value - self.value[0]):
                             self.value.append(self.subtype())
@@ -588,7 +524,6 @@ def ArrayOf(klass):
             # no wrapping index
             if (item < 1) or (item > self.value[0]):
                 raise IndexError("index out of range")
-
             # delete the item and update the length
             del self.value[item]
             self.value[0] -= 1
@@ -598,7 +533,6 @@ def ArrayOf(klass):
             for i in range(1, self.value[0] + 1):
                 if value == self.value[i]:
                     return i
-
             # not found
             raise ValueError("%r not in array" % (value,))
 
@@ -608,17 +542,15 @@ def ArrayOf(klass):
             self.__delitem__(indx)
 
         def encode(self, taglist):
-            if _debug: ArrayOf._debug("(%r)encode %r", self.__class__.__name__, taglist)
+            _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
 
             for value in self.value[1:]:
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(value)
-
                     # build a tag and encode the data into it
                     tag = Tag()
                     helper.encode(tag)
-
                     # now encode the tag
                     taglist.append(tag)
                 elif isinstance(value, self.subtype):
@@ -628,7 +560,7 @@ def ArrayOf(klass):
                     raise TypeError("%s must be a %s" % (value, self.subtype.__name__))
 
         def decode(self, taglist):
-            if _debug: ArrayOf._debug("(%r)decode %r", self.__class__.__name__, taglist)
+            _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
 
             # start with an empty array
             self.value = [0]
@@ -637,24 +569,19 @@ def ArrayOf(klass):
                 tag = taglist.Peek()
                 if tag.tagClass == Tag.closingTagClass:
                     break
-
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
-                    if _debug: ArrayOf._debug("    - building helper: %r %r", self.subtype, tag)
+                    _logger.debug("    - building helper: %r %r", self.subtype, tag)
                     taglist.Pop()
-
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(tag)
-
                     # save the value
                     self.value.append(helper.value)
                 else:
-                    if _debug: ArrayOf._debug("    - building value: %r", self.subtype)
+                    _logger.debug("    - building value: %r", self.subtype)
                     # build an element
                     value = self.subtype()
-
                     # let it decode itself
                     value.decode(taglist)
-
                     # save what was built
                     self.value.append(value)
 
@@ -662,16 +589,13 @@ def ArrayOf(klass):
             self.value[0] = len(self.value) - 1
 
         def encode_item(self, item, taglist):
-            if _debug: ArrayOf._debug("(%r)encode_item %r %r", self.__class__.__name__, item, taglist)
-
+            _logger.debug("(%r)encode_item %r %r", self.__class__.__name__, item, taglist)
             if item == 0:
                 # a helper cooperates between the atomic value and the tag
                 helper = Unsigned(self.value[0])
-
                 # build a tag and encode the data into it
                 tag = Tag()
                 helper.encode(tag)
-
                 # now encode the tag
                 taglist.append(tag)
             else:
@@ -680,11 +604,9 @@ def ArrayOf(klass):
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(self.value[item])
-
                     # build a tag and encode the data into it
                     tag = Tag()
                     helper.encode(tag)
-
                     # now encode the tag
                     taglist.append(tag)
                 elif isinstance(value, self.subtype):
@@ -694,24 +616,20 @@ def ArrayOf(klass):
                     raise TypeError("%s must be a %s" % (value, self.subtype.__name__))
 
         def decode_item(self, item, taglist):
-            if _debug: ArrayOf._debug("(%r)decode_item %r %r", self.__class__.__name__, item, taglist)
-
+            _logger.debug("(%r)decode_item %r %r", self.__class__.__name__, item, taglist)
             if item == 0:
                 # a helper cooperates between the atomic value and the tag
                 helper = Unsigned(taglist.Pop())
-
                 # save the value
                 self.value = helper.value
             elif issubclass(self.subtype, (Atomic, AnyAtomic)):
-                if _debug: ArrayOf._debug("    - building helper: %r", self.subtype)
-
+                _logger.debug("    - building helper: %r", self.subtype)
                 # a helper cooperates between the atomic value and the tag
                 helper = self.subtype(taglist.Pop())
-
                 # save the value
                 self.value = helper.value
             else:
-                if _debug: ArrayOf._debug("    - building value: %r", self.subtype)
+                _logger.debug("    - building value: %r", self.subtype)
                 # build an element
                 value = self.subtype()
 
@@ -735,7 +653,7 @@ def ArrayOf(klass):
                     file.write("%s[%d] = %r\n" % ("    " * indent, i, value))
                 elif isinstance(value, self.subtype):
                     file.write("%s[%d]\n" % ("    " * indent, i))
-                    value.debug_contents(indent+1, file, _ids)
+                    value.debug_contents(indent + 1, file, _ids)
                 else:
                     file.write("%s%s must be a %s" % ("    " * indent, value, self.subtype.__name__))
 
@@ -745,9 +663,9 @@ def ArrayOf(klass):
 
             for value in self.value:
                 if issubclass(self.subtype, Atomic):
-                    mapped_value.append(value)              ### ambiguous
+                    mapped_value.append(value)  ### ambiguous
                 elif issubclass(self.subtype, AnyAtomic):
-                    mapped_value.append(value.value)        ### ambiguous
+                    mapped_value.append(value.value)  ### ambiguous
                 elif isinstance(value, self.subtype):
                     mapped_value.append(value.dict_contents(as_class=as_class))
 
@@ -755,23 +673,18 @@ def ArrayOf(klass):
             return mapped_value
 
     # constrain it to a list of a specific type of item
-    setattr(ArrayOf, 'subtype', klass)
-    ArrayOf.__name__ = 'ArrayOf' + klass.__name__
+    setattr(ArrayOf, 'subtype', cls)
+    ArrayOf.__name__ = 'ArrayOf' + cls.__name__
 
     # cache this type
-    _array_of_map[klass] = ArrayOf
+    _array_of_map[cls] = ArrayOf
     _array_of_classes[ArrayOf] = 1
 
     # return this new type
     return ArrayOf
 
-#
-#   Choice
-#
 
-@bacpypes_debugging
 class Choice(object):
-
     choiceElements = []
 
     def __init__(self, **kwargs):
@@ -779,7 +692,7 @@ class Choice(object):
         Create a choice element, optionally providing attribute/property values.
         There should only be one, but that is not strictly enforced.
         """
-        if _debug: Choice._debug("__init__ %r", kwargs)
+        _logger.debug("__init__ %r", kwargs)
 
         # split out the keyword arguments that belong to this class
         my_kwargs = {}
@@ -790,60 +703,49 @@ class Choice(object):
         for kw in kwargs:
             if kw not in my_kwargs:
                 other_kwargs[kw] = kwargs[kw]
-        if _debug: Choice._debug("    - my_kwargs: %r", my_kwargs)
-        if _debug: Choice._debug("    - other_kwargs: %r", other_kwargs)
-
+        _logger.debug("    - my_kwargs: %r", my_kwargs)
+        _logger.debug("    - other_kwargs: %r", other_kwargs)
         # call some superclass, if there is one
         super(Choice, self).__init__(**other_kwargs)
-
         # set the attribute/property values for the ones provided
         for element in self.choiceElements:
             setattr(self, element.name, my_kwargs.get(element.name, None))
 
     def encode(self, taglist):
-        if _debug: Choice._debug("(%r)encode %r", self.__class__.__name__, taglist)
-
+        _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
         for element in self.choiceElements:
             value = getattr(self, element.name, None)
             if value is None:
                 continue
-
-            if issubclass(element.klass, (Atomic, AnyAtomic)):
+            if issubclass(element.cls, (Atomic, AnyAtomic)):
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass(value)
-
+                helper = element.cls(value)
                 # build a tag and encode the data into it
                 tag = Tag()
                 helper.encode(tag)
-
                 # convert it to context encoding
                 if element.context is not None:
                     tag = tag.app_to_context(element.context)
-
                 # now encode the tag
                 taglist.append(tag)
                 break
-
-            elif isinstance(value, element.klass):
+            elif isinstance(value, element.cls):
                 # encode an opening tag
                 if element.context is not None:
                     taglist.append(OpeningTag(element.context))
-
                 # encode the value
                 value.encode(taglist)
-
                 # encode a closing tag
                 if element.context is not None:
                     taglist.append(ClosingTag(element.context))
                 break
-
             else:
-                raise TypeError("%s must be a %s" % (element.name, element.klass.__name__))
+                raise TypeError("%s must be a %s" % (element.name, element.cls.__name__))
         else:
             raise AttributeError("missing choice of %s" % (self.__class__.__name__,))
 
     def decode(self, taglist):
-        if _debug: Choice._debug("(%r)decode %r", self.__class__.__name__, taglist)
+        _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
 
         # peek at the element
         tag = taglist.Peek()
@@ -851,16 +753,13 @@ class Choice(object):
             raise AttributeError("missing choice of %s" % (self.__class__.__name__,))
         if tag.tagClass == Tag.closingTagClass:
             raise AttributeError("missing choice of %s" % (self.__class__.__name__,))
-
         # keep track of which one was found
-        foundElement = {}
-
+        found_element = {}
         # figure out which choice it is
         for element in self.choiceElements:
-            if _debug: Choice._debug("    - checking choice: %s", element.name)
-
+            _logger.debug("    - checking choice: %s", element.name)
             # check for a sequence element
-            if element.klass in _sequence_of_classes:
+            if element.cls in _sequence_of_classes:
                 # check for context encoding
                 if element.context is None:
                     raise NotImplementedError("choice of a SequenceOf must be context encoded")
@@ -868,47 +767,38 @@ class Choice(object):
                 if tag.tagClass != Tag.contextTagClass or tag.tagNumber != element.context:
                     continue
                 taglist.Pop()
-
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass()
+                helper = element.cls()
                 helper.decode(taglist)
-
                 # now save the value
-                foundElement[element.name] = helper.value
-
+                found_element[element.name] = helper.value
                 # check for context closing tag
                 tag = taglist.Pop()
                 if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                     raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
-
                 # done
-                if _debug: Choice._debug("    - found choice (sequence)")
+                _logger.debug("    - found choice (sequence)")
                 break
 
             # check for an atomic element
-            elif issubclass(element.klass, (Atomic, AnyAtomic)):
+            elif issubclass(element.cls, (Atomic, AnyAtomic)):
                 # convert it to application encoding
                 if element.context is not None:
                     if tag.tagClass != Tag.contextTagClass or tag.tagNumber != element.context:
                         continue
-                    tag = tag.context_to_app(element.klass._app_tag)
+                    tag = tag.context_to_app(element.cls._app_tag)
                 else:
-                    if tag.tagClass != Tag.applicationTagClass or tag.tagNumber != element.klass._app_tag:
+                    if tag.tagClass != Tag.applicationTagClass or tag.tagNumber != element.cls._app_tag:
                         continue
-
                 # consume the tag
                 taglist.Pop()
-
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass(tag)
-
+                helper = element.cls(tag)
                 # now save the value
-                foundElement[element.name] = helper.value
-
+                found_element[element.name] = helper.value
                 # done
-                if _debug: Choice._debug("    - found choice (atomic)")
+                _logger.debug("    - found choice (atomic)")
                 break
-
             # some kind of structure
             else:
                 # check for context encoding
@@ -917,98 +807,78 @@ class Choice(object):
                 if tag.tagClass != Tag.openingTagClass or tag.tagNumber != element.context:
                     continue
                 taglist.Pop()
-
                 # build a value and decode it
-                value = element.klass()
+                value = element.cls()
                 value.decode(taglist)
-
                 # now save the value
-                foundElement[element.name] = value
-
+                found_element[element.name] = value
                 # check for the correct closing tag
                 tag = taglist.Pop()
                 if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                     raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
-
                 # done
-                if _debug: Choice._debug("    - found choice (structure)")
+                _logger.debug("    - found choice (structure)")
                 break
         else:
             raise AttributeError("missing choice of %s" % (self.__class__.__name__,))
-
         # now save the value and None everywhere else
         for element in self.choiceElements:
-            setattr(self, element.name, foundElement.get(element.name, None))
+            setattr(self, element.name, found_element.get(element.name, None))
 
     def debug_contents(self, indent=1, file=sys.stdout, _ids=None):
         for element in self.choiceElements:
             value = getattr(self, element.name, None)
             if value is None:
                 continue
-
-            elif issubclass(element.klass, (Atomic, AnyAtomic)):
+            elif issubclass(element.cls, (Atomic, AnyAtomic)):
                 file.write("%s%s = %r\n" % ("    " * indent, element.name, value))
                 break
-
-            elif isinstance(value, element.klass):
+            elif isinstance(value, element.cls):
                 file.write("%s%s\n" % ("    " * indent, element.name))
-                value.debug_contents(indent+1, file, _ids)
+                value.debug_contents(indent + 1, file, _ids)
                 break
-
             else:
-                file.write("%s%s must be a %s" % ("    " * indent, element.name, element.klass.__name__))
+                file.write("%s%s must be a %s" % ("    " * indent, element.name, element.cls.__name__))
         else:
             file.write("%smissing choice of %s" % ("    " * indent, self.__class__.__name__))
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if _debug: _log.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
-
+        _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # look for the chosen element
         for element in self.choiceElements:
             value = getattr(self, element.name, None)
             if value is None:
                 continue
-
-            if issubclass(element.klass, Atomic):
-                mapped_value = value                    ### ambiguous
-            elif issubclass(element.klass, AnyAtomic):
-                mapped_value = value.value              ### ambiguous
-            elif isinstance(value, element.klass):
+            if issubclass(element.cls, Atomic):
+                mapped_value = value  ### ambiguous
+            elif issubclass(element.cls, AnyAtomic):
+                mapped_value = value.value  ### ambiguous
+            elif isinstance(value, element.cls):
                 mapped_value = value.dict_contents(as_class=as_class)
-
             use_dict.__setitem__(element.name, mapped_value)
             break
-
         # return what we built/updated
         return use_dict
 
-#
-#   Any
-#
 
-@bacpypes_debugging
 class Any:
 
     def __init__(self, *args):
         self.tagList = TagList()
-
         # cast in the args
         for arg in args:
             self.cast_in(arg)
 
     def encode(self, taglist):
-        if _debug: Any._debug("encode %r", taglist)
-
+        _logger.debug("encode %r", taglist)
         taglist.extend(self.tagList)
 
     def decode(self, taglist):
-        if _debug: Any._debug("decode %r", taglist)
-
+        _logger.debug("decode %r", taglist)
         lvl = 0
         while len(taglist) != 0:
             tag = taglist.Peek()
@@ -1016,18 +886,16 @@ class Any:
                 lvl += 1
             elif tag.tagClass == Tag.closingTagClass:
                 lvl -= 1
-                if lvl < 0: break
-
+                if lvl < 0:
+                    break
             self.tagList.append(taglist.Pop())
-
         # make sure everything balances
         if lvl > 0:
             raise DecodingError("mismatched open/close tags")
 
     def cast_in(self, element):
         """encode the element into the internal tag list."""
-        if _debug: Any._debug("cast_in %r", element)
-
+        _logger.debug("cast_in %r", element)
         t = TagList()
         if isinstance(element, Atomic):
             tag = Tag()
@@ -1039,128 +907,99 @@ class Any:
             t.append(tag)
         else:
             element.encode(t)
-
         self.tagList.extend(t.tagList)
 
-    def cast_out(self, klass):
+    def cast_out(self, cls):
         """Interpret the content as a particular class."""
-        if _debug: Any._debug("cast_out %r", klass)
-
+        _logger.debug("cast_out %r", cls)
         # check for a sequence element
-        if klass in _sequence_of_classes:
+        if cls in _sequence_of_classes:
             # build a sequence helper
-            helper = klass()
-
+            helper = cls()
             # make a copy of the tag list
             t = TagList(self.tagList[:])
-
             # let it decode itself
             helper.decode(t)
-
             # make sure everything was consumed
             if len(t) != 0:
                 raise DecodingError("incomplete cast")
-
             # return what was built
             return helper.value
 
         # check for an array element
-        elif klass in _array_of_classes:
+        elif cls in _array_of_classes:
             # build a sequence helper
-            helper = klass()
-
+            helper = cls()
             # make a copy of the tag list
             t = TagList(self.tagList[:])
-
             # let it decode itself
             helper.decode(t)
-
             # make sure everything was consumed
             if len(t) != 0:
                 raise DecodingError("incomplete cast")
-
             # return what was built with Python list semantics
             return helper.value[1:]
 
-        elif issubclass(klass, (Atomic, AnyAtomic)):
+        elif issubclass(cls, (Atomic, AnyAtomic)):
             # make sure there's only one piece
             if len(self.tagList) == 0:
                 raise DecodingError("missing cast component")
             if len(self.tagList) > 1:
                 raise DecodingError("too many cast components")
-
-            if _debug: Any._debug("    - building helper: %r", klass)
-
+            _logger.debug("    - building helper: %r", cls)
             # a helper cooperates between the atomic value and the tag
-            helper = klass(self.tagList[0])
-
+            helper = cls(self.tagList[0])
             # return the value
             return helper.value
-
         else:
-            if _debug: Any._debug("    - building value: %r", klass)
-
+            _logger.debug("    - building value: %r", cls)
             # build an element
-            value = klass()
-
+            value = cls()
             # make a copy of the tag list
             t = TagList(self.tagList[:])
-
             # let it decode itself
             value.decode(t)
-
             # make sure everything was consumed
             if len(t) != 0:
                 raise DecodingError("incomplete cast")
-
             # return what was built
             return value
 
     def is_application_class_null(self):
-        if _debug: Any._debug("is_application_class_null")
-        return (len(self.tagList) == 1) and (self.tagList[0].tagClass == Tag.applicationTagClass) and (self.tagList[0].tagNumber == Tag.nullAppTag)
+        _logger.debug("is_application_class_null")
+        return (len(self.tagList) == 1) and (self.tagList[0].tagClass == Tag.applicationTagClass) and (
+                self.tagList[0].tagNumber == Tag.nullAppTag)
 
     def debug_contents(self, indent=1, file=sys.stdout, _ids=None):
         self.tagList.debug_contents(indent, file, _ids)
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if _debug: Any._debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
-
+        _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # result will be a list
         rslt_list = []
-
         # loop through the tags
         for tag in self.tagList:
             # build a tag thing
             use_dict = as_class()
-
             # save the pieces
             use_dict.__setitem__('class', tag.tagClass)
             use_dict.__setitem__('number', tag.tagNumber)
             use_dict.__setitem__('lvt', tag.tagLVT)
-
             ### use_dict.__setitem__('data', '.'.join('%02X' % ord(c) for c in tag.tagData))
-
             # add it to the list
             rslt_list = use_dict
-
         # return what we built
         return rslt_list
 
-#
-#   AnyAtomic
-#
 
 @bacpypes_debugging
 class AnyAtomic:
 
     def __init__(self, arg=None):
-        if _debug: AnyAtomic._debug("__init__ %r", arg)
-
+        _logger.debug("__init__ %r", arg)
         # default to no value
         self.value = None
-
         if arg is None:
             pass
         elif isinstance(arg, Atomic):
@@ -1171,28 +1010,22 @@ class AnyAtomic:
             raise TypeError("invalid constructor datatype")
 
     def encode(self, tag):
-        if _debug: AnyAtomic._debug("encode %r", tag)
-
+        _logger.debug("encode %r", tag)
         self.value.encode(tag)
 
     def decode(self, tag):
-        if _debug: AnyAtomic._debug("decode %r", tag)
-
-        if (tag.tagClass != Tag.applicationTagClass):
+        _logger.debug("decode %r", tag)
+        if tag.tagClass != Tag.applicationTagClass:
             raise ValueError("application tag required")
-
         # get the data
         self.value = tag.app_to_object()
 
     def __str__(self):
-        return "AnyAtomic(%s)" % (str(self.value), )
+        return "AnyAtomic(%s)" % (str(self.value),)
 
     def __repr__(self):
         desc = self.__module__ + '.' + self.__class__.__name__
-
         if self.value:
             desc += "(" + self.value.__class__.__name__ + ")"
             desc += ' ' + str(self.value)
-
         return '<' + desc + ' instance at 0x%08x' % (id(self),) + '>'
-

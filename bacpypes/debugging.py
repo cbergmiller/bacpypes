@@ -11,19 +11,19 @@ import binascii
 from io import StringIO
 
 
-# set the level of the root logger
-_root = logging.getLogger()
-_root.setLevel(1)
-
-# add a stream handler for warnings and up
-hdlr = logging.StreamHandler()
-if ('--debugDebugging' in sys.argv):
-    hdlr.setLevel(logging.DEBUG)
-else:
-    hdlr.setLevel(logging.WARNING)
-hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
-_root.addHandler(hdlr)
-del hdlr
+# # set the level of the root logger
+# _root = logging.getLogger()
+# _root.setLevel(1)
+#
+# # add a stream handler for warnings and up
+# hdlr = logging.StreamHandler()
+# if ('--debugDebugging' in sys.argv):
+#     hdlr.setLevel(logging.DEBUG)
+# else:
+#     hdlr.setLevel(logging.WARNING)
+# hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
+# _root.addHandler(hdlr)
+# del hdlr
 
 
 def btox(data, sep=''):
