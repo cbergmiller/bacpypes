@@ -13,6 +13,8 @@ from .debugging import ModuleLogger, bacpypes_debugging
 from .primitivedata import Atomic, ClosingTag, OpeningTag, Tag, TagList, \
     Unsigned
 
+DEBUG = False
+
 # some debugging
 _logger = logging.getLogger(__name__)
 
@@ -48,7 +50,7 @@ class Sequence(object):
         """
         Create a sequence element, optionally providing attribute/property values.
         """
-        _logger.debug("__init__ %r %r", args, kwargs)
+        if DEBUG: _logger.debug("__init__ %r %r", args, kwargs)
         # split out the keyword arguments that belong to this class
         my_kwargs = {}
         other_kwargs = {}
@@ -58,8 +60,8 @@ class Sequence(object):
         for kw in kwargs:
             if kw not in my_kwargs:
                 other_kwargs[kw] = kwargs[kw]
-        _logger.debug("    - my_kwargs: %r", my_kwargs)
-        _logger.debug("    - other_kwargs: %r", other_kwargs)
+        if DEBUG: _logger.debug("    - my_kwargs: %r", my_kwargs)
+        if DEBUG: _logger.debug("    - other_kwargs: %r", other_kwargs)
         # set the attribute/property values for the ones provided
         for element in self.sequenceElements:
             setattr(self, element.name, my_kwargs.get(element.name, None))
@@ -67,7 +69,7 @@ class Sequence(object):
     def encode(self, taglist):
         """
         """
-        _logger.debug(f"encode {taglist}")
+        if DEBUG: _logger.debug(f"encode {taglist}")
         global _sequence_of_classes
         # make sure we're dealing with a tag list
         if not isinstance(taglist, TagList):
@@ -83,7 +85,7 @@ class Sequence(object):
                 # might need to encode an opening tag
                 if element.context is not None:
                     taglist.append(OpeningTag(element.context))
-                _logger.debug("    - build sequence helper: %r %r", element.cls, value)
+                if DEBUG: _logger.debug("    - build sequence helper: %r %r", element.cls, value)
                 helper = element.cls(value)
                 # encode the value
                 helper.encode(taglist)
@@ -92,7 +94,7 @@ class Sequence(object):
                     taglist.append(ClosingTag(element.context))
             elif issubclass(element.cls, (Atomic, AnyAtomic)):
                 # a helper cooperates between the atomic value and the tag
-                _logger.debug("    - build helper: %r %r", element.cls, value)
+                if DEBUG: _logger.debug("    - build helper: %r %r", element.cls, value)
                 helper = element.cls(value)
                 # build a tag and encode the data into it
                 tag = Tag()
@@ -115,7 +117,7 @@ class Sequence(object):
                 raise TypeError("%s must be of type %s" % (element.name, element.cls.__name__))
 
     def decode(self, taglist):
-        _logger.debug("decode %r", taglist)
+        if DEBUG: _logger.debug("decode %r", taglist)
         # make sure we're dealing with a tag list
         if not isinstance(taglist, TagList):
             raise TypeError("TagList expected")
@@ -274,7 +276,7 @@ class Sequence(object):
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
@@ -308,14 +310,14 @@ _sequence_of_classes = {}
 def SequenceOf(cls):
     """Function to return a class that can encode and decode a list of
     some other type."""
-    _logger.debug("SequenceOf %r", cls)
+    if DEBUG: _logger.debug("SequenceOf %r", cls)
 
     global _sequence_of_map
     global _sequence_of_classes, _array_of_classes
 
     # if this has already been built, return the cached one
     if cls in _sequence_of_map:
-        _logger.debug("    - found in cache")
+        if DEBUG: _logger.debug("    - found in cache")
         return _sequence_of_map[cls]
 
     # no SequenceOf(SequenceOf(...)) allowed
@@ -330,7 +332,7 @@ def SequenceOf(cls):
         subtype = None
 
         def __init__(self, value=None):
-            _logger.debug("(%r)__init__ %r (subtype=%r)", self.__class__.__name__, value, self.subtype)
+            if DEBUG: _logger.debug("(%r)__init__ %r (subtype=%r)", self.__class__.__name__, value, self.subtype)
 
             if value is None:
                 self.value = []
@@ -355,7 +357,7 @@ def SequenceOf(cls):
             return self.value[item]
 
         def encode(self, taglist):
-            _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
+            if DEBUG: _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
             for value in self.value:
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
                     # a helper cooperates between the atomic value and the tag
@@ -372,20 +374,20 @@ def SequenceOf(cls):
                     raise TypeError("%s must be a %s" % (value, self.subtype.__name__))
 
         def decode(self, taglist):
-            _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
+            if DEBUG: _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
             while len(taglist) != 0:
                 tag = taglist.Peek()
                 if tag.tagClass == Tag.closingTagClass:
                     return
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
-                    _logger.debug("    - building helper: %r %r", self.subtype, tag)
+                    if DEBUG: _logger.debug("    - building helper: %r %r", self.subtype, tag)
                     taglist.Pop()
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(tag)
                     # save the value
                     self.value.append(helper.value)
                 else:
-                    _logger.debug("    - building value: %r", self.subtype)
+                    if DEBUG: _logger.debug("    - building value: %r", self.subtype)
                     # build an element
                     value = self.subtype()
                     # let it decode itself
@@ -423,7 +425,7 @@ def SequenceOf(cls):
     # constrain it to a list of a specific type of item
     setattr(_SequenceOf, 'subtype', cls)
     _SequenceOf.__name__ = 'SequenceOf' + cls.__name__
-    _logger.debug("    - build this class: %r", _SequenceOf)
+    if DEBUG: _logger.debug("    - build this class: %r", _SequenceOf)
     # cache this type
     _sequence_of_map[cls] = _SequenceOf
     _sequence_of_classes[_SequenceOf] = 1
@@ -542,7 +544,7 @@ def ArrayOf(cls):
             self.__delitem__(indx)
 
         def encode(self, taglist):
-            _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
+            if DEBUG: _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
 
             for value in self.value[1:]:
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
@@ -560,7 +562,7 @@ def ArrayOf(cls):
                     raise TypeError("%s must be a %s" % (value, self.subtype.__name__))
 
         def decode(self, taglist):
-            _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
+            if DEBUG: _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
 
             # start with an empty array
             self.value = [0]
@@ -570,14 +572,14 @@ def ArrayOf(cls):
                 if tag.tagClass == Tag.closingTagClass:
                     break
                 if issubclass(self.subtype, (Atomic, AnyAtomic)):
-                    _logger.debug("    - building helper: %r %r", self.subtype, tag)
+                    if DEBUG: _logger.debug("    - building helper: %r %r", self.subtype, tag)
                     taglist.Pop()
                     # a helper cooperates between the atomic value and the tag
                     helper = self.subtype(tag)
                     # save the value
                     self.value.append(helper.value)
                 else:
-                    _logger.debug("    - building value: %r", self.subtype)
+                    if DEBUG: _logger.debug("    - building value: %r", self.subtype)
                     # build an element
                     value = self.subtype()
                     # let it decode itself
@@ -589,7 +591,7 @@ def ArrayOf(cls):
             self.value[0] = len(self.value) - 1
 
         def encode_item(self, item, taglist):
-            _logger.debug("(%r)encode_item %r %r", self.__class__.__name__, item, taglist)
+            if DEBUG: _logger.debug("(%r)encode_item %r %r", self.__class__.__name__, item, taglist)
             if item == 0:
                 # a helper cooperates between the atomic value and the tag
                 helper = Unsigned(self.value[0])
@@ -616,20 +618,20 @@ def ArrayOf(cls):
                     raise TypeError("%s must be a %s" % (value, self.subtype.__name__))
 
         def decode_item(self, item, taglist):
-            _logger.debug("(%r)decode_item %r %r", self.__class__.__name__, item, taglist)
+            if DEBUG: _logger.debug("(%r)decode_item %r %r", self.__class__.__name__, item, taglist)
             if item == 0:
                 # a helper cooperates between the atomic value and the tag
                 helper = Unsigned(taglist.Pop())
                 # save the value
                 self.value = helper.value
             elif issubclass(self.subtype, (Atomic, AnyAtomic)):
-                _logger.debug("    - building helper: %r", self.subtype)
+                if DEBUG: _logger.debug("    - building helper: %r", self.subtype)
                 # a helper cooperates between the atomic value and the tag
                 helper = self.subtype(taglist.Pop())
                 # save the value
                 self.value = helper.value
             else:
-                _logger.debug("    - building value: %r", self.subtype)
+                if DEBUG: _logger.debug("    - building value: %r", self.subtype)
                 # build an element
                 value = self.subtype()
 
@@ -692,7 +694,7 @@ class Choice(object):
         Create a choice element, optionally providing attribute/property values.
         There should only be one, but that is not strictly enforced.
         """
-        _logger.debug("__init__ %r", kwargs)
+        if DEBUG: _logger.debug("__init__ %r", kwargs)
 
         # split out the keyword arguments that belong to this class
         my_kwargs = {}
@@ -703,8 +705,8 @@ class Choice(object):
         for kw in kwargs:
             if kw not in my_kwargs:
                 other_kwargs[kw] = kwargs[kw]
-        _logger.debug("    - my_kwargs: %r", my_kwargs)
-        _logger.debug("    - other_kwargs: %r", other_kwargs)
+        if DEBUG: _logger.debug("    - my_kwargs: %r", my_kwargs)
+        if DEBUG: _logger.debug("    - other_kwargs: %r", other_kwargs)
         # call some superclass, if there is one
         super(Choice, self).__init__(**other_kwargs)
         # set the attribute/property values for the ones provided
@@ -712,7 +714,7 @@ class Choice(object):
             setattr(self, element.name, my_kwargs.get(element.name, None))
 
     def encode(self, taglist):
-        _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
+        if DEBUG: _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
         for element in self.choiceElements:
             value = getattr(self, element.name, None)
             if value is None:
@@ -745,7 +747,7 @@ class Choice(object):
             raise AttributeError("missing choice of %s" % (self.__class__.__name__,))
 
     def decode(self, taglist):
-        _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
+        if DEBUG: _logger.debug("(%r)decode %r", self.__class__.__name__, taglist)
 
         # peek at the element
         tag = taglist.Peek()
@@ -757,7 +759,7 @@ class Choice(object):
         found_element = {}
         # figure out which choice it is
         for element in self.choiceElements:
-            _logger.debug("    - checking choice: %s", element.name)
+            if DEBUG: _logger.debug("    - checking choice: %s", element.name)
             # check for a sequence element
             if element.cls in _sequence_of_classes:
                 # check for context encoding
@@ -777,7 +779,7 @@ class Choice(object):
                 if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                     raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
                 # done
-                _logger.debug("    - found choice (sequence)")
+                if DEBUG: _logger.debug("    - found choice (sequence)")
                 break
 
             # check for an atomic element
@@ -797,7 +799,7 @@ class Choice(object):
                 # now save the value
                 found_element[element.name] = helper.value
                 # done
-                _logger.debug("    - found choice (atomic)")
+                if DEBUG: _logger.debug("    - found choice (atomic)")
                 break
             # some kind of structure
             else:
@@ -817,7 +819,7 @@ class Choice(object):
                 if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                     raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
                 # done
-                _logger.debug("    - found choice (structure)")
+                if DEBUG: _logger.debug("    - found choice (structure)")
                 break
         else:
             raise AttributeError("missing choice of %s" % (self.__class__.__name__,))
@@ -844,7 +846,7 @@ class Choice(object):
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
@@ -874,11 +876,11 @@ class Any:
             self.cast_in(arg)
 
     def encode(self, taglist):
-        _logger.debug("encode %r", taglist)
+        if DEBUG: _logger.debug("encode %r", taglist)
         taglist.extend(self.tagList)
 
     def decode(self, taglist):
-        _logger.debug("decode %r", taglist)
+        if DEBUG: _logger.debug("decode %r", taglist)
         lvl = 0
         while len(taglist) != 0:
             tag = taglist.Peek()
@@ -895,7 +897,7 @@ class Any:
 
     def cast_in(self, element):
         """encode the element into the internal tag list."""
-        _logger.debug("cast_in %r", element)
+        if DEBUG: _logger.debug("cast_in %r", element)
         t = TagList()
         if isinstance(element, Atomic):
             tag = Tag()
@@ -911,7 +913,7 @@ class Any:
 
     def cast_out(self, cls):
         """Interpret the content as a particular class."""
-        _logger.debug("cast_out %r", cls)
+        if DEBUG: _logger.debug("cast_out %r", cls)
         # check for a sequence element
         if cls in _sequence_of_classes:
             # build a sequence helper
@@ -946,13 +948,13 @@ class Any:
                 raise DecodingError("missing cast component")
             if len(self.tagList) > 1:
                 raise DecodingError("too many cast components")
-            _logger.debug("    - building helper: %r", cls)
+            if DEBUG: _logger.debug("    - building helper: %r", cls)
             # a helper cooperates between the atomic value and the tag
             helper = cls(self.tagList[0])
             # return the value
             return helper.value
         else:
-            _logger.debug("    - building value: %r", cls)
+            if DEBUG: _logger.debug("    - building value: %r", cls)
             # build an element
             value = cls()
             # make a copy of the tag list
@@ -966,7 +968,7 @@ class Any:
             return value
 
     def is_application_class_null(self):
-        _logger.debug("is_application_class_null")
+        if DEBUG: _logger.debug("is_application_class_null")
         return (len(self.tagList) == 1) and (self.tagList[0].tagClass == Tag.applicationTagClass) and (
                 self.tagList[0].tagNumber == Tag.nullAppTag)
 
@@ -975,7 +977,7 @@ class Any:
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # result will be a list
         rslt_list = []
         # loop through the tags
@@ -997,7 +999,7 @@ class Any:
 class AnyAtomic:
 
     def __init__(self, arg=None):
-        _logger.debug("__init__ %r", arg)
+        if DEBUG: _logger.debug("__init__ %r", arg)
         # default to no value
         self.value = None
         if arg is None:
@@ -1010,11 +1012,11 @@ class AnyAtomic:
             raise TypeError("invalid constructor datatype")
 
     def encode(self, tag):
-        _logger.debug("encode %r", tag)
+        if DEBUG: _logger.debug("encode %r", tag)
         self.value.encode(tag)
 
     def decode(self, tag):
-        _logger.debug("decode %r", tag)
+        if DEBUG: _logger.debug("decode %r", tag)
         if tag.tagClass != Tag.applicationTagClass:
             raise ValueError("application tag required")
         # get the data

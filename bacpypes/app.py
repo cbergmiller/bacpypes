@@ -50,7 +50,6 @@ class DeviceInfo(DebugContents):
         self.maxApduLengthAccepted = 1024               # maximum APDU device will accept
         self.segmentationSupported = 'noSegmentation'   # normally no segmentation
         self.vendorID = None                            # vendor identifier
-        
         self.maxNpduLength = 1497           # maximum we can send in transit
         self.maxSegmentsAccepted = None     # value for proposed/actual window size
 

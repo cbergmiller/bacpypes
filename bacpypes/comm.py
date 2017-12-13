@@ -10,6 +10,8 @@ from copy import copy as _copy
 from .errors import DecodingError, ConfigurationError
 from .debugging import btox
 
+DEBUG = True
+
 _logger = logging.getLogger(__name__)
 
 # prevent short/long struct overflow
@@ -29,11 +31,25 @@ class PCI:
     """
     PCI
     """
-    def __init__(self, user_data=None, source=None, destination=None, **kwargs):
-        _logger.debug(f'PCI.__init__ {user_data} {source} {destination} {kwargs}')
-        self.pduUserData = user_data
-        self.pduSource = source
-        self.pduDestination = destination
+    def __init__(self, *args, **kwargs):
+        if DEBUG: _logger.debug("__init__ %r %r", args, kwargs)
+        # split out the keyword arguments that belong to this class
+        my_kwargs = {}
+        other_kwargs = {}
+        for element in ('user_data', 'source', 'destination'):
+            if element in kwargs:
+                my_kwargs[element] = kwargs[element]
+        for kw in kwargs:
+            if kw not in my_kwargs:
+                other_kwargs[kw] = kwargs[kw]
+        if DEBUG: _logger.debug("    - my_kwargs: %r", my_kwargs)
+        if DEBUG: _logger.debug("    - other_kwargs: %r", other_kwargs)
+        # call some superclass, if there is one
+        super(PCI, self).__init__(*args, **other_kwargs)
+        # pick up some optional kwargs
+        self.pduUserData = my_kwargs.get('user_data', None)
+        self.pduSource = my_kwargs.get('source', None)
+        self.pduDestination = my_kwargs.get('destination', None)
 
     def update(self, pci):
         """Copy the PCI fields."""
@@ -43,22 +59,24 @@ class PCI:
 
     def pci_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
+        if DEBUG: _logger.debug("pci_contents use_dict=%r as_class=%r", use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
         # save the values
         for k, v in (('user_data', self.pduUserData), ('source', self.pduSource), ('destination', self.pduDestination)):
+            if DEBUG: _logger.debug("    - %r: %r", k, v)
             if v is None:
                 continue
             if hasattr(v, 'dict_contents'):
                 v = v.dict_contents(as_class=as_class)
             use_dict.__setitem__(k, v)
-
         # return what we built/updated
         return use_dict
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
+        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         return self.pci_contents(use_dict=use_dict, as_class=as_class)
 
 
@@ -67,8 +85,11 @@ class PDUData:
     PDUData
     """
     def __init__(self, data=None, *args, **kwargs):
+        if DEBUG: _logger.debug("__init__ %r %r %r", data, args, kwargs)
+        # this call will fail if there are args or kwargs, but not if there
+        # is another class in the __mro__ of this thing being constructed
+        super(PDUData, self).__init__(*args, **kwargs)
         # function acts like a copy constructor
-        _logger.debug(f'PDU {data}')
         if data is None:
             self.pduData = bytearray()
         elif isinstance(data, (bytes, bytearray)):
@@ -126,13 +147,15 @@ class PDUData:
             if len(self.pduData) > 20:
                 hexed = btox(self.pduData[:20], '.') + '...'
             else:
-                hexed = btox(self.pduData, '.')
-            file.write(f"{tab}pduData = x'{hexed}'\n")
+                hexed = btox(self.pduData,'.')
+            file.write("%spduData = x'%s'\n" % ('    ' * indent, hexed))
         else:
-            file.write(f"{tab}pduData = {self.pduData!r}\n")
+            file.write("%spduData = %r\n" % ('    ' * indent, self.pduData))
 
     def pdudata_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
+        if DEBUG: _logger.debug("pdudata_contents use_dict=%r as_class=%r", use_dict, as_class)
+
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
@@ -149,14 +172,18 @@ class PDUData:
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
+        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         return self.pdudata_contents(use_dict=use_dict, as_class=as_class)
 
 
 class PDU(PCI, PDUData):
-    """
-    PDU
-    """
-    def __init__(self, data=None, user_data=None, source=None, destination=None):
+
+    def __init__(self, data=None, **kwargs):
+        if DEBUG: _logger.debug("__init__ %r %r", data, kwargs)
+        # pick up some optional kwargs
+        user_data = kwargs.get('user_data', None)
+        source = kwargs.get('source', None)
+        destination = kwargs.get('destination', None)
         # carry source and destination from another PDU
         # so this can act like a copy constructor
         if isinstance(data, PDU):
@@ -173,6 +200,7 @@ class PDU(PCI, PDUData):
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
+        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
@@ -188,6 +216,7 @@ class Client:
     Client
     """
     def __init__(self, cid=None):
+        if DEBUG: _logger.debug("__init__ cid=%r", cid)
         self.clientID = cid
         self.clientPeer = None
         if cid is not None:
@@ -202,6 +231,8 @@ class Client:
                 bind(self, server)
 
     def request(self, *args, **kwargs):
+        if DEBUG: _logger.debug("request %r %r", args, kwargs)
+
         if not self.clientPeer:
             raise ConfigurationError('unbound client')
         self.clientPeer.indication(*args, **kwargs)
@@ -215,6 +246,7 @@ class Server:
     Server
     """
     def __init__(self, sid=None):
+        if DEBUG: _logger.debug("__init__ sid=%r", sid)
         self.serverID = sid
         self.serverPeer = None
         if sid is not None:
@@ -232,6 +264,7 @@ class Server:
         raise NotImplementedError('indication must be overridden')
 
     def response(self, *args, **kwargs):
+        if DEBUG: _logger.debug("response %r %r", args, kwargs)
         if not self.serverPeer:
             raise ConfigurationError('unbound server')
         self.serverPeer.confirmation(*args, **kwargs)
@@ -242,6 +275,7 @@ class Debug(Client, Server):
     Debug
     """
     def __init__(self, label=None, cid=None, sid=None):
+        if DEBUG: _logger.debug("__init__ label=%r cid=%r sid=%r", label, cid, sid)
         Client.__init__(self, cid)
         Server.__init__(self, sid)
         # save the label
@@ -279,13 +313,16 @@ class Echo(Client, Server):
     Echo
     """
     def __init__(self, cid=None, sid=None):
+        if DEBUG: _logger.debug("__init__ cid=%r sid=%r", cid, sid)
         Client.__init__(self, cid)
         Server.__init__(self, sid)
 
     def confirmation(self, *args, **kwargs):
+        if DEBUG: _logger.debug("confirmation %r %r", args, kwargs)
         self.request(*args, **kwargs)
 
     def indication(self, *args, **kwargs):
+        if DEBUG: _logger.debug("indication %r %r", args, kwargs)
         self.response(*args, **kwargs)
 
 
@@ -297,6 +334,7 @@ class ServiceAccessPoint:
     at the same time.
     """
     def __init__(self, sapID=None):
+        if DEBUG: _logger.debug("__init__(%s)", sapID)
         self.serviceID = sapID
         self.serviceElement = None
         if sapID is not None:
@@ -311,6 +349,7 @@ class ServiceAccessPoint:
                 bind(element, self)
 
     def sap_request(self, *args, **kwargs):
+        if DEBUG: _logger.debug("sap_request(%s) %r %r", self.serviceID, args, kwargs)
         if not self.serviceElement:
             raise ConfigurationError('unbound service access point')
         self.serviceElement.indication(*args, **kwargs)
@@ -319,6 +358,7 @@ class ServiceAccessPoint:
         raise NotImplementedError('sap_indication must be overridden')
 
     def sap_response(self, *args, **kwargs):
+        if DEBUG: _logger.debug("sap_response(%s) %r %r", self.serviceID, args, kwargs)
         if not self.serviceElement:
             raise ConfigurationError('unbound service access point')
         self.serviceElement.confirmation(*args, **kwargs)
@@ -332,14 +372,14 @@ class ApplicationServiceElement:
     ApplicationServiceElement
     """
     def __init__(self, aseID=None):
+        if DEBUG: _logger.debug("__init__(%s)", aseID)
+
         self.elementID = aseID
         self.elementService = None
-
         if aseID is not None:
             if aseID in element_map:
                 raise ConfigurationError(f'already an application service element {aseID!r}')
             element_map[aseID] = self
-
             # automatically bind
             if aseID in service_map:
                 service = service_map[aseID]
@@ -348,15 +388,16 @@ class ApplicationServiceElement:
                 bind(self, service)
 
     def request(self, *args, **kwargs):
+        if DEBUG: _logger.debug("request(%s) %r %r", self.elementID, args, kwargs)
         if not self.elementService:
             raise ConfigurationError('unbound application service element')
-
         self.elementService.sap_indication(*args, **kwargs)
 
     def indication(self, *args, **kwargs):
         raise NotImplementedError('indication must be overridden')
 
     def response(self, *args, **kwargs):
+        if DEBUG: _logger.debug("response(%s) %r %r", self.elementID, args, kwargs)
         if not self.elementService:
             raise ConfigurationError('unbound application service element')
         self.elementService.sap_confirmation(*args, **kwargs)
@@ -393,6 +434,7 @@ class DebugServiceElement(ApplicationServiceElement):
 
 def bind(*args):
     """bind a list of clients and servers together, top down."""
+    if DEBUG: _logger.debug("bind %r", args)
     # generic bind is pairs of names
     if not args:
         # find unbound clients and bind them
@@ -438,7 +480,9 @@ def bind(*args):
     # go through the argument pairs
     for i in range(len(args)-1):
         client = args[i]
+        if DEBUG: _logger.debug("    - client: %r", client)
         server = args[i+1]
+        if DEBUG: _logger.debug("    - server: %r", server)
         # make sure we're binding clients and servers
         if isinstance(client, Client) and isinstance(server, Server):
             client.clientPeer = server
@@ -449,4 +493,6 @@ def bind(*args):
             server.serviceElement = client
         # error
         else:
-            raise TypeError('bind() requires a client and server')
+            raise TypeError("bind() requires a client and server")
+        if DEBUG: _logger.debug("    - bound")
+

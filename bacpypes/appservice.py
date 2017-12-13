@@ -177,8 +177,8 @@ class ClientSSM(SSM):
     ClientSSM - Client Segmentation State Machine
     """
 
-    def __init__(self, sap, remote_device):
-        super(ClientSSM, self).__init__(sap, remote_device)
+    def __init__(self, sap, remoteDevice):
+        SSM.__init__(self, sap, remoteDevice)
         # initialize the retry count
         self.retryCount = 0
 
@@ -508,8 +508,8 @@ class ServerSSM(SSM):
     ServerSSM - Server Segmentation State Machine
     """
 
-    def __init__(self, sap, remote_device):
-        super(SSM, self).__init__(sap, remote_device)
+    def __init__(self, sap, remoteDevice):
+        SSM.__init__(self, sap, remoteDevice)
 
     def set_state(self, new_state, timer=0):
         """This function is called when the client wants to change state."""

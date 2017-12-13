@@ -30,7 +30,7 @@ from bacpypes.service.device import LocalDeviceObject
 # _log = ModuleLogger(globals())
 # ConsoleLogHandler(__name__)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 _logger = logging.getLogger('bacnet')
 
 
@@ -166,7 +166,7 @@ def main():
     points = []
     for i in range(40):
         points.append(('analogInput', i, ['presentValue']))
-    this_application = ReadPointListApplication(points, this_device, '192.168.2.109')
+    this_application = ReadPointListApplication(points, this_device, '10.81.0.14')
 
     # get the services supported
     services_supported = this_application.get_services_supported()

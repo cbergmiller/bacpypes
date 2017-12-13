@@ -56,7 +56,7 @@ class _StreamToPacket(StreamToPacket):
     _StreamToPacket
     """
     def __init__(self):
-        super(_StreamToPacket, self).__init__(_Packetize)
+        StreamToPacket.__init__(self, _Packetize)
 
     def indication(self, pdu):
         self.request(pdu)
@@ -184,7 +184,7 @@ class TCPServerMultiplexer(Client):
     TCPServerMultiplexer
     """
     def __init__(self, addr=None):
-        super(TCPServerMultiplexer, self).__init__()
+        Client.__init__(self)
 
         # check for some options
         if addr is None:
@@ -450,7 +450,7 @@ class TCPClientMultiplexer(Client):
     TCPClientMultiplexer
     """
     def __init__(self):
-        super(TCPClientMultiplexer, self).__init__()
+        Client.__init__(self)
         # create and bind
         self.director = TCPClientDirector()
         bind(self, _StreamToPacket(), self.director)
@@ -882,7 +882,8 @@ class ProxyServerService(ServiceAdapter):
     serviceID = PROXY_SERVICE_ID
 
     def __init__(self, mux, nsap):
-        super(ProxyServerService, self).__init__(mux)
+        ServiceAdapter.__init__(self, mux)
+
         # save a reference to the network service access point
         self.nsap = nsap
 
