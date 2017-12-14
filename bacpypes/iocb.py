@@ -14,7 +14,7 @@ from bisect import bisect_left
 from .debugging import bacpypes_debugging, ModuleLogger, DebugContents
 
 from .core import deferred
-from .task import FunctionTask
+from .task import call_later
 from .comm import Client
 
 
@@ -105,7 +105,7 @@ class IOCB(DebugContents):
             _logger.debug("    - ioPriority: %r", self.ioPriority)
             del kwargs['_priority']
         # request has no timeout
-        self.ioTimeout = None
+        self.io_timeout = None
 
     def add_callback(self, fn, *args, **kwargs):
         """Pass a function to be called when IO is complete."""
@@ -130,9 +130,9 @@ class IOCB(DebugContents):
             _logger.debug("    - dequeue")
             self.ioQueue.remove(self)
         # if there's a timer, cancel it
-        if self.ioTimeout:
+        if self.io_timeout:
             _logger.debug("    - cancel timeout")
-            self.ioTimeout.suspend_task()
+            self.io_timeout.suspend_task()
         # set the completion event
         self.ioComplete.set()
         _logger.debug("    - complete event set")
@@ -168,14 +168,11 @@ class IOCB(DebugContents):
 
     def set_timeout(self, delay, err=TimeoutError):
         """Called to set a transaction timer."""
-        _logger.debug("set_timeout(%d) %r err=%r", self.ioID, delay, err)
+        _logger.debug(f'set_timeout({self.ioID}) {delay} err={err!r}')
         # if one has already been created, cancel it
-        if self.ioTimeout:
-            self.ioTimeout.suspend_task()
-        else:
-            self.ioTimeout = FunctionTask(self.abort, err)
-        # (re)schedule it
-        self.ioTimeout.install_task(delta=delay)
+        if self.io_timeout:
+            self.io_timeout.cancel()
+        self.io_timeout = call_later(delay, self.abort, err)
 
     def __repr__(self):
         xid = id(self)
@@ -611,8 +608,7 @@ class IOQController(IOController):
             self.state = CTRL_WAITING
             _logger.debug("%s %s %s" % (_strftime(), self.name, "waiting"))
             # schedule a call in the future
-            task = FunctionTask(IOQController._wait_trigger, self)
-            task.install_task(delta=self.wait_time)
+            call_later(self.wait_time, IOQController._wait_trigger, self)
         else:
             # change our state
             self.state = CTRL_IDLE

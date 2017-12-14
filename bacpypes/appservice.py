@@ -7,7 +7,7 @@ Application Layer
 import logging
 from .debugging import DebugContents, bacpypes_debugging
 from .comm import Client, ServiceAccessPoint, ApplicationServiceElement
-from .task import OneShotTask
+from .task import call_later
 from .pdu import Address
 from .apdu import AbortPDU, AbortReason, ComplexAckPDU, \
     ConfirmedRequestPDU, Error, ErrorPDU, RejectPDU, SegmentAckPDU, \
@@ -29,7 +29,7 @@ COMPLETED = 6
 ABORTED = 7
 
 
-class SSM(OneShotTask, DebugContents):
+class SSM(DebugContents):
     """
     SSM - Segmentation State Machine
     """
@@ -40,7 +40,6 @@ class SSM(OneShotTask, DebugContents):
 
     def __init__(self, sap, remote_device):
         """Common parts for client and server segmentation."""
-        OneShotTask.__init__(self)
         self.ssmSAP = sap  # service access point
         self.remoteDevice = remote_device  # remote device information, a DeviceInfo instance
         self.invokeID = None  # invoke ID
@@ -58,26 +57,27 @@ class SSM(OneShotTask, DebugContents):
         # the maximum number of segments starts out being what's in the SAP
         # which is the defaults or values from the local device.
         self.maxSegmentsAccepted = self.ssmSAP.maxSegmentsAccepted
+        self.timer_handle = None
 
     def start_timer(self, msecs):
         # if this is active, pull it
-        if self.isScheduled:
-            self.suspend_task()
+        if self.timer_handle:
+            self.timer_handle.cancel()
         # now install this
-        self.install_task(delta=msecs / 1000.0)
+        self.timer_handle = call_later(msecs / 1000.0, self.handle_timeout)
 
     def stop_timer(self):
         # if this is active, pull it
-        if self.isScheduled:
-            self.suspend_task()
+        if self.timer_handle:
+            self.timer_handle.cancel()
+            self.timer_handle = None
 
     def restart_timer(self, msecs):
         # if this is active, pull it
-        if self.isScheduled:
-            self.suspend_task()
+        self.start_timer(msecs)
 
-        # now install this
-        self.install_task(delta=msecs / 1000.0)
+    def handle_timeout(self):
+        raise NotImplementedError()
 
     def set_state(self, new_state, timer=0):
         """This function is called when the derived class wants to change state."""
@@ -291,7 +291,7 @@ class ClientSSM(SSM):
         else:
             raise RuntimeError('invalid state')
 
-    def process_task(self):
+    def handle_timeout(self):
         """This function is called when something has taken too long."""
         if self.state == SEGMENTED_REQUEST:
             self.segmented_request_timeout()
@@ -632,7 +632,7 @@ class ServerSSM(SSM):
         else:
             raise RuntimeError('invalid APDU (4)')
 
-    def process_task(self):
+    def handle_timeout(self):
         """
         This function is called when the client has failed to send all of the segments of a segmented request,
         the application has taken too long to complete the request, or the client failed to ack the segments of a

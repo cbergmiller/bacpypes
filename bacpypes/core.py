@@ -6,14 +6,15 @@ Core
 
 import sys
 import asyncore
+import asyncio
 import signal
 import threading
 import time
 import traceback
 import warnings
 import logging
+import functools
 
-from .task import TaskManager
 from .debugging import bacpypes_debugging, ModuleLogger
 
 # some debugging
@@ -175,13 +176,8 @@ def run_once():
 
 def deferred(fn, *args, **kwargs):
     _logger.debug("deferred %r %r %r", fn, args, kwargs)
-    global deferredFns, taskManager
-    # append it to the list
-    deferredFns.append((fn, args, kwargs))
-    # trigger the task manager event
-    if taskManager and taskManager.trigger:
-        _logger.debug("    - trigger")
-        taskManager.trigger.set()
+    loop = asyncio.get_event_loop()
+    loop.call_soon(functools.partial(fn, *args, **kwargs))
 
 
 @bacpypes_debugging

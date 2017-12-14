@@ -10,8 +10,7 @@ from copy import copy as _copy
 from .errors import DecodingError, ConfigurationError
 from .debugging import btox
 
-DEBUG = True
-
+DEBUG = False
 _logger = logging.getLogger(__name__)
 
 # prevent short/long struct overflow

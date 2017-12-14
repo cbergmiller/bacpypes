@@ -21,6 +21,7 @@ from .comm import PCI as _PCI, PDUData
 _short_mask = 0xFFFF
 _long_mask = 0xFFFFFFFF
 
+DEBUG = False
 _logger = logging.getLogger(__name__)
 
 #
@@ -44,7 +45,7 @@ class Address:
     globalBroadcastAddr = 5
 
     def __init__(self, *args):
-        _logger.debug(f'__init__ {args!r}')
+        if DEBUG: _logger.debug(f'__init__ {args!r}')
         self.addrType = Address.nullAddr
         self.addrNet = None
         self.addrLen = 0
@@ -64,33 +65,33 @@ class Address:
 
     def decode_address(self, addr):
         """Initialize the address from a string.  Lots of different forms are supported."""
-        _logger.debug(f'decode_address {addr!r} ({type(addr)})')
+        if DEBUG: _logger.debug(f'decode_address {addr!r} ({type(addr)})')
         # start out assuming this is a local station
         self.addrType = Address.localStationAddr
         self.addrNet = None
         if addr == '*':
-            _logger.debug('    - localBroadcast')
+            if DEBUG: _logger.debug('    - localBroadcast')
             self.addrType = Address.localBroadcastAddr
             self.addrNet = None
             self.addrAddr = None
             self.addrLen = None
 
         elif addr == '*:*':
-            _logger.debug('   - globalBroadcast')
+            if DEBUG: _logger.debug('   - globalBroadcast')
             self.addrType = Address.globalBroadcastAddr
             self.addrNet = None
             self.addrAddr = None
             self.addrLen = None
 
         elif isinstance(addr, int):
-            _logger.debug('    - int')
+            if DEBUG: _logger.debug('    - int')
             if (addr < 0) or (addr >= 256):
                 raise ValueError('address out of range')
             self.addrAddr = struct.pack('B', addr)
             self.addrLen = 1
 
         elif isinstance(addr, (bytes, bytearray)):
-            _logger.debug('    - bytes or bytearray')
+            if DEBUG: _logger.debug('    - bytes or bytearray')
             self.addrAddr = bytes(addr)
             self.addrLen = len(addr)
 
@@ -104,16 +105,16 @@ class Address:
                 self.addrBroadcastTuple = ('255.255.255.255', self.addrPort)
 
         elif isinstance(addr, str):
-            _logger.debug('    - str')
+            if DEBUG: _logger.debug('    - str')
             m = ip_address_mask_port_re.match(addr)
             if m:
-                _logger.debug('    - IP address')
+                if DEBUG: _logger.debug('    - IP address')
                 net, addr, mask, port = m.groups()
                 if not mask:
                     mask = '32'
                 if not port:
                     port = '47808'
-                _logger.debug('    - net, addr, mask, port: %r, %r, %r, %r', net, addr, mask, port)
+                if DEBUG: _logger.debug('    - net, addr, mask, port: %r, %r, %r, %r', net, addr, mask, port)
                 if net:
                     net = int(net)
                     if net >= 65535:
@@ -134,12 +135,12 @@ class Address:
                 self.addrLen = 6
 
             elif ethernet_re.match(addr):
-                _logger.debug('    - ethernet')
+                if DEBUG: _logger.debug('    - ethernet')
                 self.addrAddr = xtob(addr, ':')
                 self.addrLen = len(self.addrAddr)
 
             elif re.match(r'^\d+$', addr):
-                _logger.debug('    - int')
+                if DEBUG: _logger.debug('    - int')
                 addr = int(addr)
                 if addr > 255:
                     raise ValueError('address out of range')
@@ -147,7 +148,7 @@ class Address:
                 self.addrLen = 1
 
             elif re.match(r'^\d+:[*]$', addr):
-                _logger.debug('    - remote broadcast')
+                if DEBUG: _logger.debug('    - remote broadcast')
                 addr = int(addr[:-2])
                 if addr >= 65535:
                     raise ValueError('network out of range')
@@ -157,7 +158,7 @@ class Address:
                 self.addrLen = None
 
             elif re.match(r'^\d+:\d+$', addr):
-                _logger.debug('    - remote station')
+                if DEBUG: _logger.debug('    - remote station')
                 net, addr = addr.split(':')
                 net = int(net)
                 addr = int(addr)
@@ -171,18 +172,18 @@ class Address:
                 self.addrLen = 1
 
             elif re.match(r'^0x([0-9A-Fa-f][0-9A-Fa-f])+$', addr):
-                _logger.debug('    - modern hex string')
+                if DEBUG: _logger.debug('    - modern hex string')
                 self.addrAddr = xtob(addr[2:])
                 self.addrLen = len(self.addrAddr)
 
             elif re.match(r"^X'([0-9A-Fa-f][0-9A-Fa-f])+'$", addr):
-                _logger.debug('    - old school hex string')
+                if DEBUG: _logger.debug('    - old school hex string')
 
                 self.addrAddr = xtob(addr[2:-1])
                 self.addrLen = len(self.addrAddr)
 
             elif re.match(r'^\d+:0x([0-9A-Fa-f][0-9A-Fa-f])+$', addr):
-                _logger.debug('    - remote station with modern hex string')
+                if DEBUG: _logger.debug('    - remote station with modern hex string')
                 net, addr = addr.split(':')
                 net = int(net)
                 if net >= 65535:
@@ -193,7 +194,7 @@ class Address:
                 self.addrLen = len(self.addrAddr)
 
             elif re.match(r"^\d+:X'([0-9A-Fa-f][0-9A-Fa-f])+'$", addr):
-                _logger.debug('    - remote station with old school hex string')
+                if DEBUG: _logger.debug('    - remote station with old school hex string')
                 net, addr = addr.split(':')
                 net = int(net)
                 if net >= 65535:
@@ -205,7 +206,7 @@ class Address:
                 self.addrLen = len(self.addrAddr)
 
             elif netifaces and interface_re.match(addr):
-                _logger.debug('    - interface name with optional port')
+                if DEBUG: _logger.debug('    - interface name with optional port')
                 interface, port = interface_re.match(addr).groups()
                 if port is not None:
                     self.addrPort = int(port)
@@ -214,7 +215,7 @@ class Address:
                 interfaces = netifaces.interfaces()
                 if interface not in interfaces:
                     raise ValueError('not an interface: %s' % (interface,))
-                _logger.debug('    - interfaces: %r', interfaces)
+                if DEBUG: _logger.debug('    - interfaces: %r', interfaces)
                 ifaddresses = netifaces.ifaddresses(interface)
                 if netifaces.AF_INET not in ifaddresses:
                     raise ValueError('interface does not support IPv4: %s' % (interface,))
@@ -222,10 +223,10 @@ class Address:
                 if len(ipv4addresses) > 1:
                     raise ValueError('interface supports multiple IPv4 addresses: %s' % (interface,))
                 ifaddress = ipv4addresses[0]
-                _logger.debug('    - ifaddress: %r', ifaddress)
+                if DEBUG: _logger.debug('    - ifaddress: %r', ifaddress)
                 addr = ifaddress['addr']
                 self.addrTuple = (addr, self.addrPort)
-                _logger.debug('    - addrTuple: %r', self.addrTuple)
+                if DEBUG: _logger.debug('    - addrTuple: %r', self.addrTuple)
                 addrstr = socket.inet_aton(addr)
                 self.addrIP = struct.unpack('!L', addrstr)[0]
                 if 'netmask' in ifaddress:
@@ -239,7 +240,7 @@ class Address:
                     self.addrBroadcastTuple = (ifaddress['broadcast'], self.addrPort)
                 else:
                     self.addrBroadcastTuple = None
-                _logger.debug('    - addrBroadcastTuple: %r', self.addrBroadcastTuple)
+                if DEBUG: _logger.debug('    - addrBroadcastTuple: %r', self.addrBroadcastTuple)
                 self.addrAddr = addrstr + struct.pack('!H', self.addrPort & _short_mask)
                 self.addrLen = 6
             else:
@@ -262,7 +263,7 @@ class Address:
                 self.addrTuple = (socket.inet_ntoa(addrstr), self.addrPort)
             else:
                 raise TypeError('tuple must be (string, port) or (long, port)')
-            _logger.debug('    - addrstr: %r', addrstr)
+            if DEBUG: _logger.debug('    - addrstr: %r', addrstr)
             self.addrIP = struct.unpack('!L', addrstr)[0]
             self.addrMask = _long_mask
             self.addrHost = None
@@ -329,7 +330,7 @@ class Address:
 
     def dict_contents(self, use_dict=None, as_class=None):
         """Return the contents of an object as a dict."""
-        _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}', use_dict, as_class)
+        if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}', use_dict, as_class)
         # exception to the rule of returning a dict
         return str(self)
 
@@ -362,7 +363,7 @@ class LocalStation(Address):
             self.addrAddr = struct.pack('B', addr)
             self.addrLen = 1
         elif isinstance(addr, (bytes, bytearray)):
-            _logger.debug('    - bytes or bytearray')
+            if DEBUG: _logger.debug('    - bytes or bytearray')
             self.addrAddr = bytes(addr)
             self.addrLen = len(addr)
         else:
@@ -386,7 +387,7 @@ class RemoteStation(Address):
             self.addrAddr = struct.pack('B', addr)
             self.addrLen = 1
         elif isinstance(addr, (bytes, bytearray)):
-            _logger.debug('    - bytes or bytearray')
+            if DEBUG: _logger.debug('    - bytes or bytearray')
             self.addrAddr = bytes(addr)
             self.addrLen = len(addr)
         else:
@@ -435,7 +436,7 @@ class PCI(_PCI):
     PCI
     """
     def __init__(self, *args, **kwargs):
-        _logger.debug(f'PCI.__init__ {args!r} {kwargs!r}')
+        if DEBUG: _logger.debug(f'PCI.__init__ {args!r} {kwargs!r}')
         # split out the keyword arguments that belong to this class
         my_kwargs = {}
         other_kwargs = {}
@@ -445,8 +446,8 @@ class PCI(_PCI):
         for kw in kwargs:
             if kw not in my_kwargs:
                 other_kwargs[kw] = kwargs[kw]
-        _logger.debug(f'    - my_kwargs: {my_kwargs!r}')
-        _logger.debug(f'    - other_kwargs: {other_kwargs!r}')
+        if DEBUG: _logger.debug(f'    - my_kwargs: {my_kwargs!r}')
+        if DEBUG: _logger.debug(f'    - other_kwargs: {other_kwargs!r}')
         # call some superclass, if there is one
         super(PCI, self).__init__(*args, **other_kwargs)
         # set the attribute/property values for the ones provided
@@ -462,7 +463,7 @@ class PCI(_PCI):
 
     def pci_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        _logger.debug(f'pci_contents use_dict={use_dict!r} as_class={as_class!r}')
+        if DEBUG: _logger.debug(f'pci_contents use_dict={use_dict!r} as_class={as_class!r}')
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
@@ -476,7 +477,7 @@ class PCI(_PCI):
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}')
+        if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}')
         return self.pci_contents(use_dict=use_dict, as_class=as_class)
 
 
@@ -485,7 +486,7 @@ class PDU(PCI, PDUData):
     PDU
     """
     def __init__(self, *args, **kwargs):
-        _logger.debug('PDU.__init__ %r %r', args, kwargs)
+        if DEBUG: _logger.debug('PDU.__init__ %r %r', args, kwargs)
         super(PDU, self).__init__(*args, **kwargs)
 
     def __str__(self):
@@ -494,7 +495,7 @@ class PDU(PCI, PDUData):
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}')
+        if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}')
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()

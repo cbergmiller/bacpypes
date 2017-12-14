@@ -8,14 +8,16 @@ values of each of them in turn and then quits.
 """
 
 from collections import deque
+from asyncio import get_event_loop
+import time
 import pprint
 import logging
 from bacpypes.debugging import bacpypes_debugging, ModuleLogger
 from bacpypes.consolelogging import ConsoleLogHandler
 
-from bacpypes.core import run, stop, deferred
+from bacpypes.core import deferred
 from bacpypes.iocb import IOCB
-
+from bacpypes.task import RecurringTask
 from bacpypes.pdu import Address
 from bacpypes.object import get_datatype
 
@@ -30,7 +32,7 @@ from bacpypes.service.device import LocalDeviceObject
 # _log = ModuleLogger(globals())
 # ConsoleLogHandler(__name__)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 _logger = logging.getLogger('bacnet')
 
 
@@ -149,7 +151,7 @@ class ReadPointListApplication(BIPSimpleApplication):
                         self.response_values[object_identifier][property_identifier] = value
         if iocb.ioError:
             _logger.debug("    - error: %r", iocb.ioError)
-        stop()
+        get_event_loop().stop()
 
 
 def main():
@@ -177,7 +179,11 @@ def main():
     deferred(this_application.do_device_request, 881000, '192.168.2.70')
     deferred(this_application.do_multi_request)
     _logger.debug("running")
-    run()
+    loop = get_event_loop()
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        loop.close()
 
     # dump out the results
     pprint.pprint(this_application.device_properties)
