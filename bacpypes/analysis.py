@@ -17,10 +17,10 @@ except:
 
 from .debugging import ModuleLogger, DebugContents, bacpypes_debugging
 
-from .pdu import PDU, Address
+from .link import PDU, Address
 from .bvll import BVLPDU, bvl_pdu_types, ForwardedNPDU, \
     DistributeBroadcastToNetwork, OriginalUnicastNPDU, OriginalBroadcastNPDU
-from .npdu import NPDU, npdu_types
+from .network import NPDU, npdu_types
 from .apdu import APDU, apdu_types, confirmed_request_types, unconfirmed_request_types, complex_ack_types, error_types, \
     ConfirmedRequestPDU, UnconfirmedRequestPDU, SimpleAckPDU, ComplexAckPDU, SegmentAckPDU, ErrorPDU, RejectPDU, AbortPDU
 

@@ -1,28 +1,9 @@
 #!/usr/bin/python
 
-"""BACnet Python Package"""
-
-#
-#   Platform Check
-#
-
-import sys as _sys
-import warnings as _warnings
-
-_supported_platforms = ('linux', 'win32', 'darwin')
-
-if _sys.platform not in _supported_platforms:
-    _warnings.warn("unsupported platform", RuntimeWarning)
-
-#
-#   Project Metadata
-#
-
 #
 #   Communications Core Modules
 #
 
-from . import comm
 from . import task
 from . import singleton
 from . import capability
@@ -32,15 +13,15 @@ from . import iocb
 #   Link Layer Modules
 #
 
-from . import pdu
-from . import vlan
+#from . import pdu
+#from . import vlan
 
 #
 #   Network Layer Modules
 #
 
-from . import npdu
-from . import netservice
+#from . import npdu
+#from . import netservice
 
 #
 #   Virtual Link Layer Modules

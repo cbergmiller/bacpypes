@@ -7,7 +7,8 @@ BACnet Virtual Link Layer Module
 from .errors import EncodingError, DecodingError
 from .debugging import ModuleLogger, DebugContents, bacpypes_debugging
 
-from .pdu import Address, PCI, PDUData, unpack_ip_addr
+from .comm import PDUData
+from .link import Address, PCI, unpack_ip_addr
 
 # some debugging
 _debug = 0

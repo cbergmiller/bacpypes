@@ -4,7 +4,6 @@
 Capability
 """
 import logging
-from .debugging import bacpypes_debugging, ModuleLogger
 
 _logger = logging.getLogger(__name__)
 

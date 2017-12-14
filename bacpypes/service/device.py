@@ -3,7 +3,7 @@
 from ..debugging import bacpypes_debugging, ModuleLogger
 from ..capability import Capability
 
-from ..pdu import GlobalBroadcast
+from ..link import GlobalBroadcast
 from ..primitivedata import Date, Time, ObjectIdentifier
 from ..constructeddata import ArrayOf
 

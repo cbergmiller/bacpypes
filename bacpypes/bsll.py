@@ -9,7 +9,8 @@ import logging
 from .errors import EncodingError, DecodingError
 from .debugging import ModuleLogger, DebugContents, bacpypes_debugging
 
-from .pdu import LocalStation, PCI, PDUData
+from .comm import PDUData
+from .link import LocalStation, PCI
 
 _logger = logging.getLogger(__name__)
 

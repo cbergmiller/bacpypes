@@ -1,8 +1,3 @@
-#!/usr/bin/python
-
-"""
-PDU
-"""
 
 import re
 import socket
@@ -14,8 +9,7 @@ try:
 except ImportError:
     netifaces = None
 
-from .debugging import ModuleLogger, bacpypes_debugging, btox, xtob
-from .comm import PCI as _PCI, PDUData
+from ..debugging import btox, xtob
 
 # pack/unpack constants
 _short_mask = 0xFFFF
@@ -23,6 +17,7 @@ _long_mask = 0xFFFFFFFF
 
 DEBUG = False
 _logger = logging.getLogger(__name__)
+__all__ = ['Address', 'pack_ip_addr', 'unpack_ip_addr']
 
 #
 #   Address
@@ -31,6 +26,21 @@ _logger = logging.getLogger(__name__)
 ip_address_mask_port_re = re.compile(r'^(?:(\d+):)?(\d+\.\d+\.\d+\.\d+)(?:/(\d+))?(?::(\d+))?$')
 ethernet_re = re.compile(r'^([0-9A-Fa-f][0-9A-Fa-f][:]){5}([0-9A-Fa-f][0-9A-Fa-f])$')
 interface_re = re.compile(r'^(?:([\w]+))(?::(\d+))?$')
+
+
+def pack_ip_addr(addr):
+    """
+    Given an IP address tuple like ('1.2.3.4', 47808) return the six-octet string useful for a BACnet address.
+    """
+    addr, port = addr
+    return socket.inet_aton(addr) + struct.pack('!H', port & _short_mask)
+
+
+def unpack_ip_addr(addr):
+    """Given a six-octet BACnet address, return an IP address tuple."""
+    if isinstance(addr, bytearray):
+        addr = bytes(addr)
+    return socket.inet_ntoa(addr[0:4]), struct.unpack('!H', addr[4:6])[0]
 
 
 class Address:
@@ -333,174 +343,3 @@ class Address:
         if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}', use_dict, as_class)
         # exception to the rule of returning a dict
         return str(self)
-
-
-def pack_ip_addr(addr):
-    """
-    Given an IP address tuple like ('1.2.3.4', 47808) return the six-octet string useful for a BACnet address.
-    """
-    addr, port = addr
-    return socket.inet_aton(addr) + struct.pack('!H', port & _short_mask)
-
-
-def unpack_ip_addr(addr):
-    """Given a six-octet BACnet address, return an IP address tuple."""
-    if isinstance(addr, bytearray):
-        addr = bytes(addr)
-    return socket.inet_ntoa(addr[0:4]), struct.unpack('!H', addr[4:6])[0]
-
-
-class LocalStation(Address):
-    """
-    LocalStation
-    """
-    def __init__(self, addr):
-        self.addrType = Address.localStationAddr
-        self.addrNet = None
-        if isinstance(addr, int):
-            if (addr < 0) or (addr >= 256):
-                raise ValueError('address out of range')
-            self.addrAddr = struct.pack('B', addr)
-            self.addrLen = 1
-        elif isinstance(addr, (bytes, bytearray)):
-            if DEBUG: _logger.debug('    - bytes or bytearray')
-            self.addrAddr = bytes(addr)
-            self.addrLen = len(addr)
-        else:
-            raise TypeError('integer, bytes or bytearray required')
-
-
-class RemoteStation(Address):
-    """
-    RemoteStation
-    """
-    def __init__(self, net, addr):
-        if not isinstance(net, int):
-            raise TypeError('integer network required')
-        if (net < 0) or (net >= 65535):
-            raise ValueError('network out of range')
-        self.addrType = Address.remoteStationAddr
-        self.addrNet = net
-        if isinstance(addr, int):
-            if (addr < 0) or (addr >= 256):
-                raise ValueError('address out of range')
-            self.addrAddr = struct.pack('B', addr)
-            self.addrLen = 1
-        elif isinstance(addr, (bytes, bytearray)):
-            if DEBUG: _logger.debug('    - bytes or bytearray')
-            self.addrAddr = bytes(addr)
-            self.addrLen = len(addr)
-        else:
-            raise TypeError('integer, bytes or bytearray required')
-
-
-class LocalBroadcast(Address):
-    """
-    LocalBroadcast
-    """
-    def __init__(self):
-        self.addrType = Address.localBroadcastAddr
-        self.addrNet = None
-        self.addrAddr = None
-        self.addrLen = None
-
-
-class RemoteBroadcast(Address):
-    """
-    RemoteBroadcast
-    """
-    def __init__(self, net):
-        if not isinstance(net, int):
-            raise TypeError('integer network required')
-        if (net < 0) or (net >= 65535):
-            raise ValueError('network out of range')
-        self.addrType = Address.remoteBroadcastAddr
-        self.addrNet = net
-        self.addrAddr = None
-        self.addrLen = None
-
-
-class GlobalBroadcast(Address):
-    """
-    GlobalBroadcast
-    """
-    def __init__(self):
-        self.addrType = Address.globalBroadcastAddr
-        self.addrNet = None
-        self.addrAddr = None
-        self.addrLen = None
-
-
-class PCI(_PCI):
-    """
-    PCI
-    """
-    def __init__(self, *args, **kwargs):
-        if DEBUG: _logger.debug(f'PCI.__init__ {args!r} {kwargs!r}')
-        # split out the keyword arguments that belong to this class
-        my_kwargs = {}
-        other_kwargs = {}
-        for element in ('expectingReply', 'networkPriority'):
-            if element in kwargs:
-                my_kwargs[element] = kwargs[element]
-        for kw in kwargs:
-            if kw not in my_kwargs:
-                other_kwargs[kw] = kwargs[kw]
-        if DEBUG: _logger.debug(f'    - my_kwargs: {my_kwargs!r}')
-        if DEBUG: _logger.debug(f'    - other_kwargs: {other_kwargs!r}')
-        # call some superclass, if there is one
-        super(PCI, self).__init__(*args, **other_kwargs)
-        # set the attribute/property values for the ones provided
-        self.pduExpectingReply = my_kwargs.get('expectingReply', 0)  # see 6.2.2 (1 or 0)
-        self.pduNetworkPriority = my_kwargs.get('networkPriority', 0)  # see 6.2.2 (0..3)
-
-    def update(self, pci):
-        """Copy the PCI fields."""
-        _PCI.update(self, pci)
-        # now do the BACnet PCI fields
-        self.pduExpectingReply = pci.pduExpectingReply
-        self.pduNetworkPriority = pci.pduNetworkPriority
-
-    def pci_contents(self, use_dict=None, as_class=dict):
-        """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug(f'pci_contents use_dict={use_dict!r} as_class={as_class!r}')
-        # make/extend the dictionary of content
-        if use_dict is None:
-            use_dict = as_class()
-        # call the parent class
-        _PCI.pci_contents(self, use_dict=use_dict, as_class=as_class)
-        # save the values
-        use_dict.__setitem__('expectingReply', self.pduExpectingReply)
-        use_dict.__setitem__('networkPriority', self.pduNetworkPriority)
-        # return what we built/updated
-        return use_dict
-
-    def dict_contents(self, use_dict=None, as_class=dict):
-        """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}')
-        return self.pci_contents(use_dict=use_dict, as_class=as_class)
-
-
-class PDU(PCI, PDUData):
-    """
-    PDU
-    """
-    def __init__(self, *args, **kwargs):
-        if DEBUG: _logger.debug('PDU.__init__ %r %r', args, kwargs)
-        super(PDU, self).__init__(*args, **kwargs)
-
-    def __str__(self):
-        return '<%s %s -> %s : %s>' % (
-        self.__class__.__name__, self.pduSource, self.pduDestination, btox(self.pduData, '.'))
-
-    def dict_contents(self, use_dict=None, as_class=dict):
-        """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}')
-        # make/extend the dictionary of content
-        if use_dict is None:
-            use_dict = as_class()
-        # call into the two base classes
-        self.pci_contents(use_dict=use_dict, as_class=as_class)
-        self.pdudata_contents(use_dict=use_dict, as_class=as_class)
-        # return what we built/updated
-        return use_dict

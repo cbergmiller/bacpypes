@@ -7,18 +7,13 @@ This application has a static list of points that it would like to read.  It rea
 values of each of them in turn and then quits.
 """
 
-from collections import deque
 from asyncio import get_event_loop
-import time
 import pprint
 import logging
-from bacpypes.debugging import bacpypes_debugging, ModuleLogger
-from bacpypes.consolelogging import ConsoleLogHandler
 
 from bacpypes.core import deferred
 from bacpypes.iocb import IOCB
-from bacpypes.task import RecurringTask
-from bacpypes.pdu import Address
+from bacpypes.link import Address
 from bacpypes.object import get_datatype
 
 from bacpypes.apdu import ReadPropertyRequest, ReadPropertyMultipleRequest, ReadAccessSpecification, PropertyReference, ReadPropertyACK

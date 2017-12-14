@@ -6,24 +6,18 @@ Application Module
 
 import warnings
 import logging
-from .debugging import bacpypes_debugging, DebugContents, ModuleLogger
+from .debugging import bacpypes_debugging, DebugContents
 from .comm import ApplicationServiceElement, bind
 from .iocb import IOController, SieveQueue
-
-from .pdu import Address
-
+from .link import Address
 from .primitivedata import ObjectIdentifier
-
 from .capability import Collector
 from .appservice import StateMachineAccessPoint, ApplicationServiceAccessPoint
-from .netservice import NetworkServiceAccessPoint, NetworkServiceElement
+from .network import NetworkServiceAccessPoint, NetworkServiceElement
 from .bvllservice import BIPSimple, BIPForeign, AnnexJCodec, UDPMultiplexer
-
 from .apdu import UnconfirmedRequestPDU, ConfirmedRequestPDU, \
     SimpleAckPDU, ComplexAckPDU, ErrorPDU, RejectPDU, AbortPDU, Error
-
 from .errors import ExecutionError, UnrecognizedService, AbortException, RejectException
-
 # for computing protocol services supported
 from .apdu import confirmed_request_types, unconfirmed_request_types, \
     ConfirmedServiceChoice, UnconfirmedServiceChoice

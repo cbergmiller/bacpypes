@@ -6,7 +6,8 @@ Application Layer Protocol Data Units
 import logging
 from .errors import DecodingError, TooManyArguments
 
-from .pdu import PCI, PDUData
+from .comm import PDUData
+from .link import PCI
 from .primitivedata import Boolean, CharacterString, Enumerated, Integer, \
     ObjectIdentifier, ObjectType, OctetString, Real, TagList, Unsigned, \
     expand_enumerations

@@ -8,7 +8,7 @@ import logging
 from .debugging import DebugContents, bacpypes_debugging
 from .comm import Client, ServiceAccessPoint, ApplicationServiceElement
 from .task import call_later
-from .pdu import Address
+from .link import Address
 from .apdu import AbortPDU, AbortReason, ComplexAckPDU, \
     ConfirmedRequestPDU, Error, ErrorPDU, RejectPDU, SegmentAckPDU, \
     SimpleAckPDU, UnconfirmedRequestPDU, apdu_types, \
