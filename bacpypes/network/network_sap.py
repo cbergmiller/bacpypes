@@ -17,8 +17,9 @@ __all__ = ['NetworkServiceAccessPoint']
 
 class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
 
-    _debug_contents = ('adapters++', 'routers++', 'networks+'
-        , 'localAdapter-', 'localAddress')
+    _debug_contents = (
+        'adapters++', 'routers++', 'networks+', 'localAdapter-', 'localAddress'
+    )
 
     def __init__(self, sap=None, sid=None):
         if DEBUG: _logger.debug("__init__ sap=%r sid=%r", sap, sid)
@@ -114,7 +115,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
     def indication(self, pdu):
         if DEBUG: _logger.debug("indication %r", pdu)
         # make sure our configuration is OK
-        if (not self.adapters):
+        if not self.adapters:
             raise ConfigurationError("no adapters")
         # might be able to relax this restriction
         if (len(self.adapters) > 1) and (not self.localAdapter):
@@ -132,15 +133,15 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
         # the hop count always starts out big
         npdu.npduHopCount = 255
         # local stations given to local adapter
-        if (npdu.pduDestination.addrType == Address.localStationAddr):
+        if npdu.pduDestination.addrType == Address.localStationAddr:
             adapter.process_npdu(npdu)
             return
         # local broadcast given to local adapter
-        if (npdu.pduDestination.addrType == Address.localBroadcastAddr):
+        if npdu.pduDestination.addrType == Address.localBroadcastAddr:
             adapter.process_npdu(npdu)
             return
         # global broadcast
-        if (npdu.pduDestination.addrType == Address.globalBroadcastAddr):
+        if npdu.pduDestination.addrType == Address.globalBroadcastAddr:
             # set the destination
             npdu.pduDestination = LocalBroadcast()
             npdu.npduDADR = apdu.pduDestination
@@ -153,7 +154,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
             raise RuntimeError("invalid destination address type: %s" % (npdu.pduDestination.addrType,))
         dnet = npdu.pduDestination.addrNet
         # if the network matches the local adapter it's local
-        if (dnet == adapter.adapterNet):
+        if dnet == adapter.adapterNet:
             ### log this, the application shouldn't be sending to a remote station address
             ### when it's a directly connected network
             raise RuntimeError("addressing problem")
@@ -180,7 +181,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
     def process_npdu(self, adapter, npdu):
         if DEBUG: _logger.debug("process_npdu %r %r", adapter, npdu)
         # make sure our configuration is OK
-        if (not self.adapters):
+        if not self.adapters:
             raise ConfigurationError("no adapters")
         if (len(self.adapters) > 1) and (not self.localAdapter):
             raise ConfigurationError("local adapter must be set")
@@ -229,7 +230,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
         elif npdu.npduDADR.addrType == Address.remoteBroadcastAddr:
             if not self.localAdapter:
                 return
-            if (npdu.npduDADR.addrNet == adapter.adapterNet):
+            if npdu.npduDADR.addrNet == adapter.adapterNet:
                 ### log this, attempt to route to a network the device is already on
                 return
             processLocally = (npdu.npduDADR.addrNet == self.localAdapter.adapterNet)
@@ -237,7 +238,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
         elif npdu.npduDADR.addrType == Address.remoteStationAddr:
             if not self.localAdapter:
                 return
-            if (npdu.npduDADR.addrNet == adapter.adapterNet):
+            if npdu.npduDADR.addrNet == adapter.adapterNet:
                 ### log this, attempt to route to a network the device is already on
                 return
             processLocally = (npdu.npduDADR.addrNet == self.localAdapter.adapterNet) \
@@ -307,10 +308,10 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
             if not forwardMessage:
                 return
         # make sure we're really a router
-        if (len(self.adapters) == 1):
+        if len(self.adapters) == 1:
             return
         # make sure it hasn't looped
-        if (npdu.npduHopCount == 0):
+        if npdu.npduHopCount == 0:
             return
         # build a new NPDU to send to other adapters
         newpdu = _copy(npdu)
@@ -364,7 +365,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
             # send it to all of the connected adapters
             for xadapter in self.adapters:
                 # skip the horse it rode in on
-                if (xadapter is adapter):
+                if xadapter is adapter:
                     continue
                 ### make sure the adapter is OK
                 self.sap_indication(xadapter, xnpdu)

@@ -99,7 +99,7 @@ class ReadPropertyApplication(BIPSimpleApplication):
 
             sys.stdout.write(self.property_identifier + " = " + str(value) + '\n')
             if hasattr(value, 'debug_contents'):
-                value.debug_contents(file=sys.stdout)
+                value.debug_contents(stream=sys.stdout)
             sys.stdout.flush()
 
         if iocb.ioError:

@@ -15,7 +15,7 @@ from bacpypes.core import deferred
 from bacpypes.iocb import IOCB
 from bacpypes.link import Address
 from bacpypes.object import get_datatype
-
+from bacpypes.debugging import LoggingFormatter
 from bacpypes.apdu import ReadPropertyRequest, ReadPropertyMultipleRequest, ReadAccessSpecification, PropertyReference, ReadPropertyACK
 from bacpypes.primitivedata import Unsigned
 from bacpypes.constructeddata import Array
@@ -23,12 +23,20 @@ from bacpypes.constructeddata import Array
 from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.device import LocalDeviceObject
 
-# _debug = 0
-# _log = ModuleLogger(globals())
-# ConsoleLogHandler(__name__)
+_logger = logging.getLogger('bacpypes')
+_logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
+_logger.addHandler(ch)
 
-logging.basicConfig(level=logging.DEBUG)
-_logger = logging.getLogger('bacnet')
+_alogger = logging.getLogger('asyncio')
+_alogger.setLevel(logging.DEBUG)
+ach = logging.StreamHandler()
+ach.setLevel(logging.DEBUG)
+ach.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
+_alogger.addHandler(ach)
+
 
 
 class ReadPointListApplication(BIPSimpleApplication):
@@ -82,7 +90,7 @@ class ReadPointListApplication(BIPSimpleApplication):
         else:
             _logger.debug("    - ioError or ioResponse expected")
 
-    def do_multi_request(self):
+    def do_multi_request(self, addr):
         _logger.debug('do_request')
 
         read_access_specs = []
@@ -94,7 +102,7 @@ class ReadPointListApplication(BIPSimpleApplication):
                 )
             )
         request = ReadPropertyMultipleRequest(listOfReadAccessSpecs=read_access_specs)
-        request.pduDestination = Address('192.168.2.70')
+        request.pduDestination = Address(addr)
         _logger.debug('    - request: %r', request)
         # make an IOCB
         iocb = IOCB(request)
@@ -172,9 +180,10 @@ def main():
     # let the device object know
     this_device.protocolServicesSupported = services_supported.value
     deferred(this_application.do_device_request, 881000, '192.168.2.70')
-    deferred(this_application.do_multi_request)
+    # deferred(this_application.do_multi_request, '192.168.2.70')
     _logger.debug("running")
     loop = get_event_loop()
+    loop.set_debug(True)
     try:
         loop.run_forever()
     except KeyboardInterrupt:

@@ -11,12 +11,11 @@ from time import time as _time
 import threading
 from bisect import bisect_left
 
-from .debugging import bacpypes_debugging, ModuleLogger, DebugContents
+from .debugging import DebugContents
 
 from .core import deferred
 from .task import call_later
 from .comm import Client
-
 
 _logger = logging.getLogger(__name__)
 
@@ -27,11 +26,11 @@ local_controllers = {}
 #   IOCB States
 #
 
-IDLE = 0        # has not been submitted
-PENDING = 1     # queued, waiting for processing
-ACTIVE = 2      # being processed
-COMPLETED = 3   # finished
-ABORTED = 4     # finished in a bad way
+IDLE = 0  # has not been submitted
+PENDING = 1  # queued, waiting for processing
+ACTIVE = 2  # being processed
+COMPLETED = 3  # finished
+ABORTED = 4  # finished in a bad way
 
 _stateNames = {
     0: 'IDLE',
@@ -39,28 +38,27 @@ _stateNames = {
     2: 'ACTIVE',
     3: 'COMPLETED',
     4: 'ABORTED',
-    }
+}
 
 #
 #   IOQController States
 #
 
-CTRL_IDLE = 0       # nothing happening
-CTRL_ACTIVE = 1     # working on an iocb
-CTRL_WAITING = 1    # waiting between iocb requests (throttled)
+CTRL_IDLE = 0  # nothing happening
+CTRL_ACTIVE = 1  # working on an iocb
+CTRL_WAITING = 1  # waiting between iocb requests (throttled)
 
 _ctrlStateNames = {
     0: 'IDLE',
     1: 'ACTIVE',
     2: 'WAITING',
-    }
+}
 
 # special abort error
 TimeoutError = RuntimeError("timeout")
 
 # current time formatting (short version)
 _strftime = lambda: "%011.6f" % (_time() % 3600,)
-
 
 _identNext = 1
 _identLock = threading.Lock()
@@ -70,6 +68,10 @@ class IOCB(DebugContents):
     """
     IOCB - Input Output Control Block
     """
+    _debug_contents = ('args', 'kwargs', 'ioState', 'ioResponse-', 'ioError', 'ioController', 'ioServerRef',
+                       'ioControllerRef', 'ioClientID', 'ioClientAddr', 'ioComplete', 'ioCallback+', 'ioQueue',
+                       'ioPriority', 'ioTimeout')
+
     def __init__(self, *args, **kwargs):
         global _identNext
         # lock the identity sequence number
@@ -179,13 +181,12 @@ class IOCB(DebugContents):
         if xid < 0:
             xid += (1 << 32)
         sname = self.__module__ + '.' + self.__class__.__name__
-        desc = "(%d)" % (self.ioID)
+        desc = "(%d)" % self.ioID
         return '<' + sname + desc + ' instance at 0x%08x' % (xid,) + '>'
 
 
 class IOChainMixIn(DebugContents):
-
-    _debug_contents = ( 'ioChain++', )
+    _debug_contents = ('ioChain++',)
 
     def __init__(self, iocb):
         _logger.debug("__init__ %r", iocb)
@@ -286,7 +287,6 @@ class IOChain(IOCB, IOChainMixIn):
 
 
 class IOGroup(IOCB, DebugContents):
-
     _debug_contents = ('ioMembers',)
 
     def __init__(self):
@@ -364,7 +364,7 @@ class IOQueue:
         # add the request to the end of the list of iocb's at same priority
         priority = iocb.ioPriority
         item = (priority, iocb)
-        self.queue.insert(bisect_left(self.queue, (priority+1,)), item)
+        self.queue.insert(bisect_left(self.queue, (priority + 1,)), item)
         # point the iocb back to this queue
         iocb.ioQueue = self
         # set the event, queue is no longer empty
@@ -516,7 +516,6 @@ class IOController(object):
 
 
 class IOQController(IOController):
-
     wait_time = 0.0
 
     def __init__(self, name=None):

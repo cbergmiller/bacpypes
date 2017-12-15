@@ -4,22 +4,34 @@
 Application Layer Protocol Data Units
 """
 import logging
-from .errors import DecodingError, TooManyArguments
+from ..errors import DecodingError, TooManyArguments
 
-from .comm import PDUData
-from .link import PCI
-from .primitivedata import Boolean, CharacterString, Enumerated, Integer, \
+from ..comm import PDUData
+from ..link import PCI
+from ..primitivedata import Boolean, CharacterString, Enumerated, Integer, \
     ObjectIdentifier, ObjectType, OctetString, Real, TagList, Unsigned, \
     expand_enumerations
-from .constructeddata import Any, Choice, Element, Sequence, SequenceOf
-from .basetypes import ChannelValue, DateTime, DeviceAddress, ErrorType, \
+from ..constructeddata import Any, Choice, Element, Sequence, SequenceOf
+from ..basetypes import ChannelValue, DateTime, DeviceAddress, ErrorType, \
     EventState, EventTransitionBits, EventType, LifeSafetyOperation, \
     NotificationParameters, NotifyType, ObjectPropertyReference, \
     PropertyIdentifier, PropertyReference, PropertyValue, RecipientProcess, \
     ResultFlags, Segmentation, TimeStamp, VTClass
 
-
 _logger = logging.getLogger(__name__)
+__all__ = [
+    'apdu_types', 'APCI', 'APDU', 'unconfirmed_request_types', 'confirmed_request_types', 'complex_ack_types',
+    'error_types', 'ConfirmedRequestPDU', 'UnconfirmedRequestPDU', 'SimpleAckPDU',
+    'ComplexAckPDU', 'SegmentAckPDU', 'ErrorPDU', 'RejectReason', 'RejectPDU', 'AbortPDU', 'APCISequence',
+    'ConfirmedRequestSequence', 'ComplexAckSequence', 'UnconfirmedRequestSequence', 'ErrorSequence', 'Error',
+    'ChangeListError', 'CreateObjectError', 'ConfirmedPrivateTransferError', 'WritePropertyMultipleError',
+    'VTCloseError', 'ReadPropertyRequest', 'ReadPropertyACK', 'ReadAccessSpecification', 'ReadPropertyMultipleRequest',
+    'ReadAccessResultElementChoice', 'ReadPropertyMultipleACK', 'ReadAccessResultElement', 'ReadAccessResult',
+    'EventNotificationParameters', 'AbortReason', 'ConfirmedServiceChoice', 'UnconfirmedServiceChoice', 'WhoIsRequest',
+    'WhoHasRequest', 'IAmRequest', 'IHaveRequest', 'ConfirmedCOVNotificationRequest', 'PropertyReference',
+    'UnconfirmedCOVNotificationRequest', 'AtomicReadFileACK', 'AtomicReadFileACKAccessMethodChoice',
+    'AtomicReadFileACKAccessMethodRecordAccess', 'AtomicReadFileACKAccessMethodStreamAccess', 'AtomicWriteFileACK'
+]
 
 # a dictionary of message type values and classes
 apdu_types = {}
@@ -86,7 +98,7 @@ def decode_max_segments_accepted(arg):
 #
 
 _max_apdu_response_encoding = [50, 128, 206, 480, 1024, 1476, None, None, None, None, None, None, None, None, None,
-    None]
+                               None]
 
 
 def encode_max_apdu_length_accepted(arg):
@@ -111,6 +123,11 @@ class APCI(PCI):
     """
     APCI
     """
+    _debug_contents = (
+        'apduType', 'apduSeg', 'apduMor', 'apduSA', 'apduSrv', 'apduNak', 'apduSeq', 'apduWin', 'apduMaxSegs',
+        'apduMaxResp', 'apduService', 'apduInvokeID', 'apduAbortRejectReason'
+    )
+
     def __init__(self, *args, **kwargs):
         super(APCI, self).__init__(*args, **kwargs)
 
@@ -146,27 +163,21 @@ class APCI(PCI):
 
     def __repr__(self):
         """Return a string representation of the PDU."""
-        # start with the class name
         sname = self.__module__ + '.' + self.__class__.__name__
-
         # expand the type if possible
         stype = apdu_types.get(self.apduType, None)
         if stype:
             stype = stype.__name__
         else:
             stype = '?'
-
         # add the invoke ID if it has one
         if self.apduInvokeID is not None:
             stype += ',' + str(self.apduInvokeID)
-
-        # put it together
         return f'<{sname}({stype}) instance at {hex(id(self))}>'
 
     def encode(self, pdu):
         """encode the contents of the APCI into the PDU."""
         PCI.update(pdu, self)
-
         if self.apduType == ConfirmedRequestPDU.pduType:
             # PDU type
             buff = self.apduType << 4
@@ -244,12 +255,14 @@ class APCI(PCI):
 
     def decode(self, pdu):
         """decode the contents of the PDU into the APCI."""
+        _logger.debug(f'APCI.decode {pdu!r}')
         PCI.update(self, pdu)
         # decode the first octet
         buff = pdu.get()
         # decode the APCI type
         self.apduType = (buff >> 4) & 0x0F
 
+        # ToDo: warum hat die Basisklasse Verweise zu manchen erbenden Klassen? Grausiges Design!
         if self.apduType == ConfirmedRequestPDU.pduType:
             self.apduSeg = ((buff & 0x08) != 0)
             self.apduMor = ((buff & 0x04) != 0)
@@ -357,11 +370,9 @@ class APDU(APCI, PDUData):
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # call the parent classes
         self.apci_contents(use_dict=use_dict, as_class=as_class)
         self.apdu_contents(use_dict=use_dict, as_class=as_class)
-
         # return what we built/updated
         return use_dict
 
@@ -463,11 +474,9 @@ class ComplexAckPDU(_APDU):
 
     def __init__(self, choice=None, invokeID=None, context=None, *args, **kwargs):
         super(ComplexAckPDU, self).__init__(*args, **kwargs)
-
         self.apduType = ComplexAckPDU.pduType
         self.apduService = choice
         self.apduInvokeID = invokeID
-
         # use the context to fill in most of the fields
         if context is not None:
             self.apduService = context.apduService
@@ -1660,7 +1669,6 @@ class RequestKeyRequest(ConfirmedRequestSequence):
         Element('remoteDeviceIdentifier', ObjectIdentifier),
         Element('remoteDeviceAddress', DeviceAddress),
     ]
-
 
 
 class ConfirmedServiceChoice(Enumerated):

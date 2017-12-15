@@ -102,7 +102,7 @@ class ReadWritePropertyConsoleCmd(ConsoleCmd):
 
                 sys.stdout.write(str(value) + '\n')
                 if hasattr(value, 'debug_contents'):
-                    value.debug_contents(file=sys.stdout)
+                    value.debug_contents(stream=sys.stdout)
                 sys.stdout.flush()
 
             # do something for error/reject/abort

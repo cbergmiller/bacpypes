@@ -97,7 +97,8 @@ class UDPDirector(asyncio.DatagramProtocol, Server, ServiceAccessPoint):
         self.transport.close()
 
     def send_request(self, pdu):
-        self.transport.sendto(pdu.pduData, pdu.pduDestination)
+        _logger.info(f'upd send_request to {pdu.pduDestination}')
+        self.transport.sendto(pdu.pduData, addr=pdu.pduDestination)
 
     def indication(self, pdu):
         """Client requests are queued for delivery."""

@@ -15,6 +15,7 @@ class TCPClientActor(TCPClient):
     Actors are helper objects for a director.  There is one actor for each connection.
     """
     def __init__(self, director, peer):
+        raise NotImplementedError
         if DEBUG: _logger.debug("__init__ %r %r", director, peer)
         # no director yet, no connection error
         self.director = None

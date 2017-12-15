@@ -18,54 +18,44 @@ class UDPActor:
     """
     def __init__(self, director, peer):
         if DEBUG: _logger.debug("__init__ %r %r", director, peer)
-
         # keep track of the director
         self.director = director
-
         # associated with a peer
         self.peer = peer
-
         # add a timer
         self.timeout = director.timeout
         if self.timeout > 0:
             self.timeout_handle = call_later(self.timeout, self.idle_timeout)
         else:
             self.timeout_handle = None
-
         # tell the director this is a new actor
         self.director.add_actor(self)
 
     def idle_timeout(self):
         if DEBUG: _logger.debug("idle_timeout")
-
         # tell the director this is gone
         self.director.del_actor(self)
 
     def indication(self, pdu):
         if DEBUG: _logger.debug("indication %r", pdu)
-
         # reschedule the timer
         if self.timeout_handle:
             self.timeout_handle.cancel()
             self.timeout_handle = call_later(self.timeout, self.idle_timeout)
-
         # put it in the outbound queue for the director
         self.director.send_request(pdu)
 
     def response(self, pdu):
         if DEBUG: _logger.debug("response %r", pdu)
-
         # reschedule the timer
         if self.timeout_handle:
             self.timeout_handle.cancel()
             self.timeout_handle = call_later(self.timeout, self.idle_timeout)
-
         # process this as a response from the director
         self.director.response(pdu)
 
     def handle_error(self, error=None):
         if DEBUG: _logger.debug("handle_error %r", error)
-
         # pass along to the director
         if error is not None:
             self.director.actor_error(self, error)

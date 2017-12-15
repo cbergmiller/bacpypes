@@ -12,6 +12,8 @@ class PCI(_PCI):
     """
     PCI
     """
+    _debug_contents = ('pduExpectingReply', 'pduNetworkPriority')
+
     def __init__(self, *args, **kwargs):
         if DEBUG: _logger.debug(f'PCI.__init__ {args!r} {kwargs!r}')
         # split out the keyword arguments that belong to this class

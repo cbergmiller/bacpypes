@@ -21,6 +21,7 @@ class TCPClientDirector(Server, ServiceAccessPoint, DebugContents):
     _debug_contents = ('connect_timeout', 'idle_timeout', 'actorClass', 'clients', 'reconnect')
 
     def __init__(self, connect_timeout=None, idle_timeout=None, actorClass=TCPClientActor, sid=None, sapID=None):
+        raise NotImplementedError
         if DEBUG:
             _logger.debug("__init__ connect_timeout=%r idle_timeout=%r actorClass=%r sid=%r sapID=%r",
             connect_timeout, idle_timeout, actorClass, sid, sapID,

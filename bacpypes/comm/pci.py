@@ -10,6 +10,8 @@ class PCI:
     """
     PCI
     """
+    _debug_contents = ('pduUserData+', 'pduSource', 'pduDestination')
+
     def __init__(self, *args, **kwargs):
         if DEBUG: _logger.debug("__init__ %r %r", args, kwargs)
         # split out the keyword arguments that belong to this class

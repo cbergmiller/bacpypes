@@ -7,7 +7,7 @@ import logging
 from ..core import deferred
 from ..comm import PDU
 
-DEBUG = False
+DEBUG = True
 _logger = logging.getLogger(__name__)
 __all__ = ['TCPClient']
 
@@ -23,6 +23,7 @@ class TCPClient(asyncore.dispatcher):
     _connect_timeout = CONNECT_TIMEOUT
 
     def __init__(self, peer):
+        raise NotImplementedError
         if DEBUG: _logger.debug("__init__ %r", peer)
         asyncore.dispatcher.__init__(self)
         # ask the dispatcher for a socket

@@ -27,8 +27,8 @@ from . import iocb
 #   Virtual Link Layer Modules
 #
 
-from . import bvll
-from . import bvllservice
+# from . import bvll
+# from . import bvllservice
 from . import bsll
 from . import bsllservice
 
@@ -42,10 +42,10 @@ from . import basetypes
 
 from . import object
 
-from . import apdu
+#from . import apdu
 
-from . import app
-from . import appservice
+#from . import app
+#from . import appservice
 from . import service
 
 #

@@ -97,7 +97,7 @@ class ReadRangeConsoleCmd(ConsoleCmd):
                 # dump it out
                 for i, item in enumerate(value):
                     sys.stdout.write("[%d]\n" % (i,))
-                    item.debug_contents(file=sys.stdout, indent=2)
+                    item.debug_contents(stream=sys.stdout, indent=2)
                 sys.stdout.flush()
 
             # do something for error/reject/abort
