@@ -2,7 +2,6 @@
 import sys
 import asyncio
 import logging
-from ..debugging import ModuleLogger, DebugContents, bacpypes_debugging
 
 from ..transport import UDPDirector
 from ..comm import Client, Server, bind

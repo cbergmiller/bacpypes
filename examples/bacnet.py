@@ -12,7 +12,7 @@ import pprint
 import logging
 
 from bacpypes.core import deferred
-from bacpypes.iocb import IOCB
+from bacpypes.comm import IOCB
 from bacpypes.link import Address
 from bacpypes.object import get_datatype
 from bacpypes.debugging import LoggingFormatter
@@ -36,7 +36,6 @@ ach = logging.StreamHandler()
 ach.setLevel(logging.DEBUG)
 ach.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
 _alogger.addHandler(ach)
-
 
 
 class ReadPointListApplication(BIPSimpleApplication):
@@ -121,14 +120,14 @@ class ReadPointListApplication(BIPSimpleApplication):
                 # here is the object identifier
                 object_identifier = result.objectIdentifier
                 self.response_values[object_identifier] = {}
-                _logger.debug("    - objectIdentifier: %r", object_identifier)
+                # _logger.debug("    - objectIdentifier: %r", object_identifier)
                 # now come the property values per object
                 for element in result.listOfResults:
                     # get the property and array index
                     property_identifier = element.propertyIdentifier
-                    _logger.debug("    - propertyIdentifier: %r", property_identifier)
+                    # _logger.debug("    - propertyIdentifier: %r", property_identifier)
                     property_array_index = element.propertyArrayIndex
-                    _logger.debug("    - propertyArrayIndex: %r", property_array_index)
+                    # _logger.debug("    - propertyArrayIndex: %r", property_array_index)
                     # here is the read result
                     read_result = element.readResult
                     # check for an error
@@ -139,7 +138,7 @@ class ReadPointListApplication(BIPSimpleApplication):
                         property_value = read_result.propertyValue
                         # find the datatype
                         datatype = get_datatype(object_identifier[0], property_identifier)
-                        _logger.debug("    - datatype: %r", datatype)
+                        # _logger.debug("    - datatype: %r", datatype)
                         if not datatype:
                             raise TypeError("unknown datatype")
 
@@ -180,7 +179,7 @@ def main():
     # let the device object know
     this_device.protocolServicesSupported = services_supported.value
     deferred(this_application.do_device_request, 881000, '192.168.2.70')
-    # deferred(this_application.do_multi_request, '192.168.2.70')
+    deferred(this_application.do_multi_request, '192.168.2.70')
     _logger.debug("running")
     loop = get_event_loop()
     loop.set_debug(True)

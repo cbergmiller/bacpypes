@@ -10,7 +10,7 @@ __all__ = ['PCI']
 
 class PCI(_PCI):
     """
-    PCI
+    Link Layer PCI
     """
     _debug_contents = ('pduExpectingReply', 'pduNetworkPriority')
 

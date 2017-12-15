@@ -5,11 +5,8 @@ Change Of Value Service
 """
 import time
 from ..debugging import bacpypes_debugging, DebugContents, ModuleLogger
-from ..capability import Capability
-
+from ..comm import Capability, IOCB
 from ..task import call_later
-from ..iocb import IOCB
-
 from ..basetypes import DeviceAddress, COVSubscription, PropertyValue, \
     Recipient, RecipientProcess, ObjectPropertyReference
 from ..constructeddata import SequenceOf, Any

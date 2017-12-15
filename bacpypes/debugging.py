@@ -36,9 +36,6 @@ def xtob(data, sep=''):
     return binascii.unhexlify(data)
 
 
-#
-#   ModuleLogger
-#
 
 def ModuleLogger(globs):
     """Create a module level logger.

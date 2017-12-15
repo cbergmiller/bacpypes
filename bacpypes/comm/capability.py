@@ -6,6 +6,7 @@ Capability
 import logging
 
 _logger = logging.getLogger(__name__)
+__all__ = ['Capability', 'Collector', 'compose_capability', 'add_capability']
 
 
 class Capability(object):

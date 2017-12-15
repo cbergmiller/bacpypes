@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
 from ..debugging import bacpypes_debugging, ModuleLogger
-from ..capability import Capability
-
+from ..comm import Capability
 from ..object import FileObject
 
 from ..apdu import AtomicReadFileACK, AtomicReadFileACKAccessMethodChoice, \

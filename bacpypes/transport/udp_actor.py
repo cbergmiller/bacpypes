@@ -14,13 +14,12 @@ __all__ = ['UDPActor', 'UDPPickleActor']
 class UDPActor:
     """
     UDPActor
-    Actors are helper objects for a director.  There is one actor for each peer.
+    Actors are helper objects for a director.
+    There is one actor for each peer.
     """
     def __init__(self, director, peer):
         if DEBUG: _logger.debug("__init__ %r %r", director, peer)
-        # keep track of the director
         self.director = director
-        # associated with a peer
         self.peer = peer
         # add a timer
         self.timeout = director.timeout
@@ -61,11 +60,6 @@ class UDPActor:
             self.director.actor_error(self, error)
 
 
-#
-#   UDPPickleActor
-#
-
-@bacpypes_debugging
 class UDPPickleActor(UDPActor):
 
     def __init__(self, *args):
@@ -74,22 +68,18 @@ class UDPPickleActor(UDPActor):
 
     def indication(self, pdu):
         if DEBUG: _logger.debug("indication %r", pdu)
-
         # pickle the data
         pdu.pduData = pickle.dumps(pdu.pduData)
-
         # continue as usual
         UDPActor.indication(self, pdu)
 
     def response(self, pdu):
         if DEBUG: _logger.debug("response %r", pdu)
-
         # unpickle the data
         try:
             pdu.pduData = pickle.loads(pdu.pduData)
         except:
-            UDPPickleActor._exception("pickle error")
+            _logger.exception("pickle error")
             return
-
         # continue as usual
         UDPActor.response(self, pdu)

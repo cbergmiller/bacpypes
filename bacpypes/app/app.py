@@ -6,10 +6,9 @@ Application Module
 
 import warnings
 import logging
-from ..comm import ApplicationServiceElement
+from ..comm import ApplicationServiceElement, Collector
 from ..link import Address
 from ..primitivedata import ObjectIdentifier
-from ..capability import Collector
 from ..apdu import UnconfirmedRequestPDU, ConfirmedRequestPDU, Error
 from ..errors import ExecutionError, UnrecognizedService, AbortException, RejectException
 # for computing protocol services supported

@@ -24,7 +24,7 @@ __all__ = ['PDU']
 
 class PDU(PCI, PDUData):
     """
-    PDU
+    Link Layer PDU
     """
     def __init__(self, *args, **kwargs):
         if DEBUG: _logger.debug('PDU.__init__ %r %r', args, kwargs)

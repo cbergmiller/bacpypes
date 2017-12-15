@@ -1,6 +1,6 @@
 
 import logging
-from ..iocb import IOController, SieveQueue
+from ..comm import IOController, SieveQueue, IOCB
 
 from ..apdu import UnconfirmedRequestPDU, SimpleAckPDU, ComplexAckPDU, ErrorPDU, RejectPDU, AbortPDU
 from .app import Application
@@ -10,14 +10,16 @@ __all__ = ['ApplicationIOController']
 
 
 class ApplicationIOController(IOController, Application):
-    """ApplicationIOController"""
+    """
+    ApplicationIOController
+    """
     def __init__(self, *args, **kwargs):
         IOController.__init__(self)
         Application.__init__(self, *args, **kwargs)
         # queues for each address
         self.queue_by_address = {}
 
-    def process_io(self, iocb):
+    def process_io(self, iocb: IOCB):
         # get the destination address from the pdu
         destination_address = iocb.args[0].pduDestination
         # look up the queue

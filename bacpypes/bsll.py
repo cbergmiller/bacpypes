@@ -7,7 +7,7 @@ BACnet Streaming Link Layer Module
 import hashlib
 import logging
 from .errors import EncodingError, DecodingError
-from .debugging import ModuleLogger, DebugContents, bacpypes_debugging
+from .debugging import DebugContents
 
 from .comm import PDUData
 from .link import LocalStation, PCI
@@ -22,20 +22,14 @@ def register_bslpdu_type(cls):
     bsl_pdu_types[cls.messageType] = cls
 
 
-#
-#   Service Identifiers
-#
-
+# Service Identifiers
 DEVICE_TO_DEVICE_SERVICE_ID = 0x01
 ROUTER_TO_ROUTER_SERVICE_ID = 0x02
 PROXY_SERVICE_ID = 0x03
 LANE_SERVICE_ID = 0x04
 CLIENT_SERVER_SERVICE_ID = 0x05
 
-#
-#   Hash Functions
-#
-
+# Hash Functions
 _md5 = lambda x: hashlib.md5(x).digest()
 _sha1 = lambda x: hashlib.sha1(x).digest()
 _sha224 = lambda x: hashlib.sha224(x).digest()
@@ -45,10 +39,7 @@ _sha512 = lambda x: hashlib.sha512(x).digest()
 
 hash_functions = (_md5, _sha1, _sha224, _sha256, _sha384, _sha512)
 
-#
-#   Result Codes
-#
-
+# Result Codes
 SUCCESS = 0
 NO_DEVICE_TO_DEVICE_SERVICE = 1
 NO_ROUTER_TO_ROUTER_SERVICE = 2

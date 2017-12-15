@@ -3,11 +3,11 @@
 #
 #   Communications Core Modules
 #
-
+#from . import comm
 from . import task
 from . import singleton
-from . import capability
-from . import iocb
+#from . import capability
+#from . import iocb
 
 #
 #   Link Layer Modules

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from ..debugging import bacpypes_debugging, ModuleLogger
-from ..capability import Capability
+from ..comm import Capability
 
 from ..link import GlobalBroadcast
 from ..primitivedata import Date, Time, ObjectIdentifier
