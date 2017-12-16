@@ -77,7 +77,7 @@ def _strftime():
 #   IOCB - Input Output Control Block
 #
 
-_identNext = 1
+_ident_next = 1
 _identLock = threading.Lock()
 
 @bacpypes_debugging
@@ -91,7 +91,7 @@ class IOCB(DebugContents):
         )
 
     def __init__(self, *args, **kwargs):
-        global _identNext
+        global _ident_next
 
         # lock the identity sequence number
         _identLock.acquire()

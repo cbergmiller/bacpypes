@@ -30,7 +30,6 @@ class Client:
 
     def request(self, *args, **kwargs):
         if DEBUG: _logger.debug("request %r %r", args, kwargs)
-
         if not self.clientPeer:
             raise ConfigurationError('unbound client')
         self.clientPeer.indication(*args, **kwargs)

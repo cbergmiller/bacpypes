@@ -1,8 +1,9 @@
 
 import logging
 import threading
-from bisect import bisect_left
 from .iocb_states import *
+from .iocb import IOCB
+from asyncio import PriorityQueue
 
 _logger = logging.getLogger(__name__)
 __all__ = ['IOQueue']
@@ -11,86 +12,53 @@ __all__ = ['IOQueue']
 class IOQueue:
 
     def __init__(self, name=None):
-        _logger.debug("__init__ %r", name)
-        self.not_empty = threading.Event()
-        self.not_empty.clear()
-        self.queue = []
+        _logger.debug(f'__init__ name={name!r}')
+        self.queue = PriorityQueue()
 
-    def put(self, iocb):
+    @property
+    def empty(self):
+        return self.queue.empty()
+
+    def put(self, iocb: IOCB):
         """
         Add an IOCB to a queue. This is usually called by the function that filters
         requests and passes them out to the correct processing thread.
         """
-        _logger.debug("put %r", iocb)
+        _logger.debug(f'put {iocb!r} prio {iocb.io_priority}')
         # requests should be pending before being queued
-        if iocb.ioState != PENDING:
-            raise RuntimeError("invalid state transition")
-        # save that it might have been empty
-        was_empty = not self.not_empty.isSet()
+        if iocb.io_state != PENDING:
+            raise RuntimeError('invalid state transition')
         # add the request to the end of the list of iocb's at same priority
-        priority = iocb.ioPriority
-        item = (priority, iocb)
-        self.queue.insert(bisect_left(self.queue, (priority + 1,)), item)
+        self.queue.put_nowait(iocb)
         # point the iocb back to this queue
-        iocb.ioQueue = self
-        # set the event, queue is no longer empty
-        self.not_empty.set()
-        return was_empty
+        iocb.io_queue = self
 
-    def get(self, block=1, delay=None):
-        """Get a request from a queue, optionally block until a request is available."""
-        _logger.debug("get block=%r delay=%r", block, delay)
-        # if the queue is empty and we do not block return None
-        if not block and not self.not_empty.isSet():
-            _logger.debug("    - not blocking and empty")
+    def get(self):
+        """Get a request from a queue."""
+        if self.queue.empty():
+            # if the queue is empty and we return None
+            _logger.debug('    - Queue is empty')
             return None
-        # wait for something to be in the queue
-        if delay:
-            self.not_empty.wait(delay)
-            if not self.not_empty.isSet():
-                return None
-        else:
-            self.not_empty.wait()
         # extract the first element
-        priority, iocb = self.queue[0]
-        del self.queue[0]
-        iocb.ioQueue = None
-        # if the queue is empty, clear the event
-        qlen = len(self.queue)
-        if not qlen:
-            self.not_empty.clear()
-        # return the request
+        iocb = self.queue.get_nowait()
+        iocb.io_queue = None
         return iocb
 
     def remove(self, iocb):
         """Remove a control block from the queue, called if the request is canceled/aborted."""
-        _logger.debug("remove %r", iocb)
-        # remove the request from the queue
-        for i, item in enumerate(self.queue):
-            if iocb is item[1]:
-                _logger.debug("    - found at %d", i)
-                del self.queue[i]
-                # if the queue is empty, clear the event
-                qlen = len(self.queue)
-                if not qlen:
-                    self.not_empty.clear()
-                # record the new length
-                # self.queuesize.Record( qlen, _time() )
-                break
-        else:
-            _logger.debug("    - not found")
+        _logger.debug(f'remove {iocb!r}')
+        new_queue = PriorityQueue()
+        while not self.queue.empty():
+            item = self.queue.get_nowait()
+            if item is not iocb:
+                new_queue.put_nowait(item)
+        self.queue = new_queue
 
     def abort(self, err):
         """Abort all of the control blocks in the queue."""
-        _logger.debug("abort %r", err)
+        _logger.debug(f'abort {err!r}')
         # send aborts to all of the members
-        try:
-            for iocb in self.queue:
-                iocb.ioQueue = None
-                iocb.abort(err)
-            # flush the queue
-            self.queue = []
-            # the queue is now empty, clear the event
-            self.not_empty.clear()
-        except ValueError:
-            pass
+        while not self.queue.empty():
+            iocb = self.get()
+            iocb.io_queue = None
+            iocb.abort(err)

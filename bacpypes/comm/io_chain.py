@@ -24,9 +24,9 @@ class IOChain(IOCB, DebugContents):
         if not self.ioChain:
             return
         # this object becomes its controller
-        chain.ioController = self
+        chain.io_controller = self
         # consider the parent active
-        chain.ioState = ACTIVE
+        chain.io_state = ACTIVE
         try:
             _logger.debug("    - encoding")
             # let the derived class set the args and kwargs
@@ -53,11 +53,11 @@ class IOChain(IOCB, DebugContents):
         except Exception as e:
             # extract the error and abort
             _logger.exception("    - decoding exception: %r", e)
-            iocb.ioState = ABORTED
-            iocb.ioError = e
+            iocb.io_state = ABORTED
+            iocb.io_error = e
         # break the references
         self.ioChain = None
-        iocb.ioController = None
+        iocb.io_controller = None
         # notify the client
         iocb.trigger()
 
@@ -83,16 +83,16 @@ class IOChain(IOCB, DebugContents):
         # refer to the chained iocb
         iocb = self.ioChain
         # if this has completed successfully, pass it up
-        if self.ioState == COMPLETED:
-            _logger.debug("    - completed: %r", self.ioResponse)
+        if self.io_state == COMPLETED:
+            _logger.debug("    - completed: %r", self.io_response)
             # change the state and transform the content
-            iocb.ioState = COMPLETED
-            iocb.ioResponse = self.ioResponse
+            iocb.io_state = COMPLETED
+            iocb.io_response = self.io_response
         # if this aborted, pass that up too
-        elif self.ioState == ABORTED:
-            _logger.debug("    - aborted: %r", self.ioError)
+        elif self.io_state == ABORTED:
+            _logger.debug("    - aborted: %r", self.io_error)
             # change the state
-            iocb.ioState = ABORTED
-            iocb.ioError = self.ioError
+            iocb.io_state = ABORTED
+            iocb.io_error = self.io_error
         else:
-            raise RuntimeError("invalid state: %d" % (self.ioState,))
+            raise RuntimeError("invalid state: %d" % (self.io_state,))

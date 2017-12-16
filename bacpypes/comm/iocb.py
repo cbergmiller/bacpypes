@@ -1,8 +1,3 @@
-#!/usr/bin/python
-
-"""
-IOCB Module
-"""
 
 import logging
 import threading
@@ -12,154 +7,132 @@ from ..task import call_later
 from .iocb_states import *
 
 _logger = logging.getLogger(__name__)
-
-# globals
-local_controllers = {}
-
-# special abort error
-TimeoutError = RuntimeError("timeout")
-
-_identNext = 1
-_identLock = threading.Lock()
+_ident_next = 1
+_ident_lock = threading.Lock()
+__all__ = ['IOCB']
 
 
 class IOCB(DebugContents):
     """
     IOCB - Input Output Control Block
     """
-    _debug_contents = ('args', 'kwargs', 'ioState', 'ioResponse-', 'ioError', 'ioController', 'ioServerRef',
-                       'ioControllerRef', 'ioClientID', 'ioClientAddr', 'ioComplete', 'ioCallback+', 'ioQueue',
-                       'ioPriority', 'ioTimeout')
+    _debug_contents = ('args', 'kwargs', 'io_state', 'io_response-', 'io_error', 'io_controller', 'ioServerRef',
+                       'ioControllerRef', 'ioClientID', 'ioClientAddr', 'io_complete', 'io_callback+', 'io_queue',
+                       'io_priority', 'io_timeout')
 
     def __init__(self, *args, **kwargs):
-        global _identNext
         # lock the identity sequence number
-        _identLock.acquire()
-        # generate a unique identity for this block
-        ioID = _identNext
-        _identNext += 1
-        # release the lock
-        _identLock.release()
+        with _ident_lock:
+            # generate a unique identity for this block
+            global _ident_next
+            io_id = _ident_next
+            _ident_next += 1
         # debugging postponed until ID acquired
-        _logger.debug("__init__(%d) %r %r", ioID, args, kwargs)
+        _logger.debug(f'__init__({io_id}) {args!r} {kwargs!r}')
         # save the ID
-        self.ioID = ioID
+        self.io_id = io_id
         # save the request parameters
         self.args = args
         self.kwargs = kwargs
         # start with an idle request
-        self.ioState = IDLE
-        self.ioResponse = None
-        self.ioError = None
+        self.io_state = IDLE
+        self.io_response = None
+        self.io_error = None
         # blocks are bound to a controller
-        self.ioController = None
+        self.io_controller = None
         # each block gets a completion event
-        self.ioComplete = threading.Event()
-        self.ioComplete.clear()
+        self.io_complete = threading.Event()
+        self.io_complete.clear()
         # applications can set a callback functions
-        self.ioCallback = []
+        self.io_callback = []
         # request is not currently queued
-        self.ioQueue = None
+        self.io_queue = None
+        self.io_priority = 0
         # extract the priority if it was given
-        self.ioPriority = kwargs.get('_priority', 0)
         if '_priority' in kwargs:
-            _logger.debug("    - ioPriority: %r", self.ioPriority)
-            del kwargs['_priority']
+            self.io_priority = kwargs.pop('_priority')
+            _logger.debug(f'    - io priority: {self.io_priority!r}')
         # request has no timeout
         self.io_timeout = None
 
     def add_callback(self, fn, *args, **kwargs):
         """Pass a function to be called when IO is complete."""
-        _logger.debug("add_callback(%d) %r %r %r", self.ioID, fn, args, kwargs)
+        _logger.debug(f'add_callback({self.io_id}) {fn!r} {args!r} {kwargs!r}')
         # store it
-        self.ioCallback.append((fn, args, kwargs))
+        self.io_callback.append((fn, args, kwargs))
         # already complete?
-        if self.ioComplete.isSet():
+        if self.io_complete.isSet():
             self.trigger()
 
     def wait(self, *args):
         """Wait for the completion event to be set."""
-        _logger.debug("wait(%d) %r", self.ioID, args)
+        _logger.debug(f'wait({self.io_id}) {args!r}')
         # waiting from a non-daemon thread could be trouble
-        self.ioComplete.wait(*args)
+        self.io_complete.wait(*args)
 
     def trigger(self):
         """Set the completion event and make the callback(s)."""
-        _logger.debug("trigger(%d)", self.ioID)
+        _logger.debug(f'trigger({self.io_id})')
         # if it's queued, remove it from its queue
-        if self.ioQueue:
-            _logger.debug("    - dequeue")
-            self.ioQueue.remove(self)
+        if self.io_queue:
+            _logger.debug('    - dequeue')
+            self.io_queue.remove(self)
         # if there's a timer, cancel it
         if self.io_timeout:
-            _logger.debug("    - cancel timeout")
-            self.io_timeout.suspend_task()
+            _logger.debug('    - cancel timeout')
+            self.io_timeout.cancel()
         # set the completion event
-        self.ioComplete.set()
-        _logger.debug("    - complete event set")
+        self.io_complete.set()
+        _logger.debug('    - complete event set')
         # make the callback(s)
-        for fn, args, kwargs in self.ioCallback:
-            _logger.debug("    - callback fn: %r %r %r", fn, args, kwargs)
+        for fn, args, kwargs in self.io_callback:
+            _logger.debug(f'    - callback fn: {fn!r} {args!r} {kwargs!r}')
             fn(self, *args, **kwargs)
 
     def complete(self, msg):
-        """Called to complete a transaction, usually when ProcessIO has
-        shipped the IOCB off to some other thread or function."""
-        _logger.debug("complete(%d) %r", self.ioID, msg)
-        if self.ioController:
+        """
+        Called to complete a transaction, usually when ProcessIO has
+        shipped the IOCB off to some other thread or function.
+        """
+        _logger.debug(f'complete({self.io_id}) {msg!r}')
+        if self.io_controller:
             # pass to controller
-            self.ioController.complete_io(self, msg)
+            self.io_controller.complete_io(self, msg)
         else:
             # just fill in the data
-            self.ioState = COMPLETED
-            self.ioResponse = msg
+            self.io_state = COMPLETED
+            self.io_response = msg
             self.trigger()
 
     def abort(self, err):
         """Called by a client to abort a transaction."""
-        _logger.debug("abort(%d) %r", self.ioID, err)
-        if self.ioController:
+        _logger.debug(f'abort({self.io_id}) {err!r}')
+        if self.io_controller:
             # pass to controller
-            self.ioController.abort_io(self, err)
-        elif self.ioState < COMPLETED:
+            self.io_controller.abort_io(self, err)
+        elif self.io_state < COMPLETED:
             # just fill in the data
-            self.ioState = ABORTED
-            self.ioError = err
+            self.io_state = ABORTED
+            self.io_error = err
             self.trigger()
 
     def set_timeout(self, delay, err=TimeoutError):
         """Called to set a transaction timer."""
-        _logger.debug(f'set_timeout({self.ioID}) {delay} err={err!r}')
+        _logger.debug(f'set_timeout({self.io_id}) {delay} err={err!r}')
         # if one has already been created, cancel it
         if self.io_timeout:
             self.io_timeout.cancel()
         self.io_timeout = call_later(delay, self.abort, err)
 
     def __repr__(self):
-        xid = id(self)
-        if xid < 0:
-            xid += (1 << 32)
-        sname = self.__module__ + '.' + self.__class__.__name__
-        desc = "(%d)" % self.ioID
-        return '<' + sname + desc + ' instance at 0x%08x' % (xid,) + '>'
+        return f'<{self.__module__}.{self.__class__.__name__} instance ({self.io_id})>'
 
+    def __lt__(self, other):
+        """Instances have to be comparable with < to work with Priority Queue."""
+        assert isinstance(other, IOCB)
+        # ToDo: check order of priority
+        if self.io_priority != other.io_priority:
+            return self.io_priority < other.io_priority
+        else:
+            return self.io_id < other.io_id
 
-def register_controller(controller):
-    _logger.debug("register_controller %r", controller)
-    global local_controllers
-    # skip those that shall not be named
-    if not controller.name:
-        return
-    # make sure there isn't one already
-    if controller.name in local_controllers:
-        raise RuntimeError("already a local controller named %r" % (controller.name,))
-    local_controllers[controller.name] = controller
-
-
-def abort(err):
-    """Abort everything, everywhere."""
-    _logger.debug("abort %r", err)
-    global local_controllers
-    # tell all the local controllers to abort
-    for controller in local_controllers.values():
-        controller.abort(err)

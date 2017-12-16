@@ -21,8 +21,8 @@ class IOGroup(IOCB, DebugContents):
         # start out being done.  When an IOCB is added to the
         # group that is not already completed, this state will
         # change to PENDING.
-        self.ioState = COMPLETED
-        self.ioComplete.set()
+        self.io_state = COMPLETED
+        self.io_complete.set()
 
     def add(self, iocb):
         """Add an IOCB to the group, you can also add other groups."""
@@ -30,8 +30,8 @@ class IOGroup(IOCB, DebugContents):
         # add this to our members
         self.ioMembers.append(iocb)
         # assume all of our members have not completed yet
-        self.ioState = PENDING
-        self.ioComplete.clear()
+        self.io_state = PENDING
+        self.io_complete.clear()
         # when this completes, call back to the group.  If this
         # has already completed, it will trigger
         iocb.add_callback(self.group_callback)
@@ -41,13 +41,13 @@ class IOGroup(IOCB, DebugContents):
         _logger.debug("group_callback %r", iocb)
         # check all the members
         for iocb in self.ioMembers:
-            if not iocb.ioComplete.isSet():
+            if not iocb.io_complete.isSet():
                 _logger.debug("    - waiting for child: %r", iocb)
                 break
         else:
             _logger.debug("    - all children complete")
             # everything complete
-            self.ioState = COMPLETED
+            self.io_state = COMPLETED
             self.trigger()
 
     def abort(self, err):
@@ -56,8 +56,8 @@ class IOGroup(IOCB, DebugContents):
         function will be called."""
         _logger.debug("abort %r", err)
         # change the state to reflect that it was killed
-        self.ioState = ABORTED
-        self.ioError = err
+        self.io_state = ABORTED
+        self.io_error = err
         # abort all the members
         for iocb in self.ioMembers:
             iocb.abort(err)

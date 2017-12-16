@@ -62,11 +62,11 @@ class ReadPointListApplication(BIPSimpleApplication):
             _logger.debug(f'iocb: {iocb}')
 
     def complete_device_request(self, iocb):
-        if iocb.ioError:
-            _logger.debug("    - error: %r", iocb.ioError)
+        if iocb.io_error:
+            _logger.debug("    - error: %r", iocb.io_error)
             # do something for success
-        elif iocb.ioResponse:
-            apdu = iocb.ioResponse
+        elif iocb.io_response:
+            apdu = iocb.io_response
             # should be an ack
             if not isinstance(apdu, ReadPropertyACK):
                 _logger.debug("    - not an ack")
@@ -112,9 +112,9 @@ class ReadPointListApplication(BIPSimpleApplication):
         self.request_io(iocb)
 
     def complete_multi_request(self, iocb):
-        _logger.debug("complete_request %r", iocb)
-        if iocb.ioResponse:
-            apdu = iocb.ioResponse
+        _logger.debug("complete_multi_request %r", iocb)
+        if iocb.io_response:
+            apdu = iocb.io_response
             # loop through the results
             for result in apdu.listOfReadAccessResults:
                 # here is the object identifier
@@ -151,8 +151,8 @@ class ReadPointListApplication(BIPSimpleApplication):
                         else:
                             value = property_value.cast_out(datatype)
                         self.response_values[object_identifier][property_identifier] = value
-        if iocb.ioError:
-            _logger.debug("    - error: %r", iocb.ioError)
+        if iocb.io_error:
+            _logger.debug("    - error: %r", iocb.io_error)
         get_event_loop().stop()
 
 

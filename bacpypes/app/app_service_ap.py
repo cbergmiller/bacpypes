@@ -52,7 +52,6 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
                 except AbortException as err:
                     # execution abort
                     error_found = err
-
             # if there was an error, send it back to the client
             if isinstance(error_found, RejectException):
                 # reject exception
@@ -66,7 +65,6 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
                 abort_pdu.set_context(apdu)
                 # send it to the client
                 self.response(abort_pdu)
-
         elif isinstance(apdu, UnconfirmedRequestPDU):
             atype = unconfirmed_request_types.get(apdu.apduService)
             if not atype:
@@ -75,22 +73,21 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             try:
                 xpdu = atype()
                 xpdu.decode(apdu)
-            except RejectException as err:
+            except RejectException:
                 # decoding reject
                 return
-            except AbortException as err:
+            except AbortException:
                 # decoding abort
                 return
             try:
                 # forward the decoded packet
                 self.sap_request(xpdu)
-            except RejectException as err:
+            except RejectException:
                 # execution reject
                 pass
-            except AbortException as err:
+            except AbortException:
                 # execution abort
                 pass
-
         else:
             # unknown PDU type?!
             pass
@@ -104,7 +101,6 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             except Exception as err:
                 _logger.exception(f'confirmed request encoding error: {err!r}')
                 return
-
         elif isinstance(apdu, UnconfirmedRequestPDU):
             try:
                 xpdu = UnconfirmedRequestPDU()
@@ -113,7 +109,6 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             except Exception as err:
                 _logger.exception(f'unconfirmed request encoding error: {err!r}')
                 return
-
         else:
             # unknown PDU type?!
             return
@@ -128,7 +123,6 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
     def confirmation(self, apdu):
         if isinstance(apdu, SimpleAckPDU):
             xpdu = apdu
-
         elif isinstance(apdu, ComplexAckPDU):
             atype = complex_ack_types.get(apdu.apduService)
             if not atype:
@@ -140,7 +134,6 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             except Exception as err:
                 # unconfirmed request decoding error
                 return
-
         elif isinstance(apdu, ErrorPDU):
             atype = error_types.get(apdu.apduService)
             if not atype:

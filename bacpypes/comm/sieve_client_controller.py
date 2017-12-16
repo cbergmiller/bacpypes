@@ -62,6 +62,6 @@ class SieveClientController(Client, IOController):
         else:
             queue.complete_io(queue.active_iocb, pdu)
         # if the queue is empty and idle, forget about the controller
-        if not queue.ioQueue.queue and not queue.active_iocb:
+        if not queue.io_queue.queue and not queue.active_iocb:
             _logger.debug("    - queue is empty")
             del self.queues[source_address]

@@ -1,9 +1,10 @@
 import logging
 from ..comm import Client, ServiceAccessPoint
 from ..link import Address
-from ..apdu import AbortPDU, AbortReason, ComplexAckPDU, ConfirmedRequestPDU, ErrorPDU, RejectPDU, SegmentAckPDU, \
+from ..apdu import AbortPDU, ComplexAckPDU, ConfirmedRequestPDU, ErrorPDU, RejectPDU, SegmentAckPDU, \
     SimpleAckPDU, UnconfirmedRequestPDU, apdu_types
 from .client_ssm import ClientSSM
+from .server_ssm import ServerSSM
 
 _logger = logging.getLogger(__name__)
 __all__ = ['StateMachineAccessPoint']
@@ -205,7 +206,6 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             self.clientTransactions.append(tr)
             # let it run
             tr.indication(apdu)
-
         else:
             raise RuntimeError('invalid APDU (9)')
 

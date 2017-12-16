@@ -48,7 +48,7 @@ class ApplicationIOController(IOController, Application):
         else:
             raise RuntimeError('unrecognized APDU type')
         # if the queue is empty and idle, forget about the controller
-        if not queue.ioQueue.queue and not queue.active_iocb:
+        if not queue.io_queue.queue and not queue.active_iocb:
             del self.queue_by_address[address]
 
     def request(self, apdu):

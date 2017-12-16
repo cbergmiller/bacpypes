@@ -75,21 +75,21 @@ class DebugContents(object):
         # loop through the classes and look for _debug_contents
         attrs = []
         cids = []
-        ownFn = []
+        own_fn = []
         for cls in classes:
             if cls is DebugContents:
                 continue
             if not issubclass(cls, DebugContents) and hasattr(cls, 'debug_contents'):
-                for i, seenAlready in enumerate(ownFn):
+                for i, seenAlready in enumerate(own_fn):
                     if issubclass(cls, seenAlready):
-                        del ownFn[i]
+                        del own_fn[i]
                         break
-                ownFn.append(cls)
+                own_fn.append(cls)
                 continue
             # look for a tuple of attribute names
-            if not hasattr(cls, '_debug_contents'):
+            debug_contents = getattr(cls, '_debug_contents', None)
+            if not debug_contents:
                 continue
-            debug_contents = cls._debug_contents
             if not isinstance(debug_contents, tuple):
                 raise ValueError(f'{cls.__name__}._debug_contents must be a tuple')
             if id(debug_contents) in cids:
@@ -101,7 +101,7 @@ class DebugContents(object):
                     attrs.append(attr)
         if DEBUG:
             _logger.debug("    - attrs: %r", attrs)
-            _logger.debug("    - ownFn: %r", ownFn)
+            _logger.debug("    - own_fn: %r", own_fn)
 
         # make/extend the list of objects already seen
         if _ids is None:
@@ -171,8 +171,8 @@ class DebugContents(object):
                         value.debug_contents(indent + 1, stream, _ids)
 
         # go through the functions
-        ownFn.reverse()
-        for cls in ownFn:
+        own_fn.reverse()
+        for cls in own_fn:
             cls.debug_contents(self, indent, stream, _ids)
 
 

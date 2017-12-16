@@ -491,18 +491,18 @@ class ChangeOfValueServices(Capability):
     def cov_confirmation(self, iocb):
         if _debug: ChangeOfValueServices._debug("cov_confirmation %r", iocb)
         # do something for success
-        if iocb.ioResponse:
+        if iocb.io_response:
             if _debug: ChangeOfValueServices._debug("    - ack")
-            self.cov_ack(iocb.cov, iocb.args[0], iocb.ioResponse)
-        elif isinstance(iocb.ioError, Error):
-            if _debug: ChangeOfValueServices._debug("    - error: %r", iocb.ioError.errorCode)
-            self.cov_error(iocb.cov, iocb.args[0], iocb.ioError)
-        elif isinstance(iocb.ioError, RejectPDU):
-            if _debug: ChangeOfValueServices._debug("    - reject: %r", iocb.ioError.apduAbortRejectReason)
-            self.cov_reject(iocb.cov, iocb.args[0], iocb.ioError)
-        elif isinstance(iocb.ioError, AbortPDU):
-            if _debug: ChangeOfValueServices._debug("    - abort: %r", iocb.ioError.apduAbortRejectReason)
-            self.cov_abort(iocb.cov, iocb.args[0], iocb.ioError)
+            self.cov_ack(iocb.cov, iocb.args[0], iocb.io_response)
+        elif isinstance(iocb.io_error, Error):
+            if _debug: ChangeOfValueServices._debug("    - error: %r", iocb.io_error.errorCode)
+            self.cov_error(iocb.cov, iocb.args[0], iocb.io_error)
+        elif isinstance(iocb.io_error, RejectPDU):
+            if _debug: ChangeOfValueServices._debug("    - reject: %r", iocb.io_error.apduAbortRejectReason)
+            self.cov_reject(iocb.cov, iocb.args[0], iocb.io_error)
+        elif isinstance(iocb.io_error, AbortPDU):
+            if _debug: ChangeOfValueServices._debug("    - abort: %r", iocb.io_error.apduAbortRejectReason)
+            self.cov_abort(iocb.cov, iocb.args[0], iocb.io_error)
 
     def cov_ack(self, cov, request, response):
         if _debug: ChangeOfValueServices._debug("cov_ack %r %r %r", cov, request, response)
