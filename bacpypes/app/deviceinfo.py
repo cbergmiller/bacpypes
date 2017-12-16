@@ -1,4 +1,16 @@
 
+"""
+The device information objects and associated cache are used to assist with
+the following:
+
+* Device-address-binding, the close associate between the device identifier
+  for a device and its network address
+* Construction of confirmed services to determine if a device can accept
+  segmented requests and/or responses and the maximum size of an APDU
+* The vendor of the device to know what additional vendor specific objects,
+  properties, and other datatypes are available
+"""
+
 from ..debugging import DebugContents
 from ..link import Address
 
@@ -32,7 +44,16 @@ class DeviceInfo(DebugContents):
 
 class DeviceInfoCache:
     """
-    DeviceInfoCache
+    An instance of this class is used to manage the cache of device information
+    on behalf of the application.  The information may come from interrogating
+    the device as it presents itself on the network or from a database, or
+    some combination of the two.
+
+    The default implementation is to only use information from the network and
+    provide some reasonable defaults when information isn't available.  The
+    :class:`Application` is provided a reference to an instance of this class
+    or a derived class, and multiple application instances may share a cache,
+    if that's appropriate.
     """
     def __init__(self):
         self.cache = {}

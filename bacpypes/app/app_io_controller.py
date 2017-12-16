@@ -11,7 +11,9 @@ __all__ = ['ApplicationIOController']
 
 class ApplicationIOController(IOController, Application):
     """
-    ApplicationIOController
+    Application IO Controller.
+    This IO Controller has queues IO requests so that there is only one request running
+    for every unique destination address.
     """
     def __init__(self, *args, **kwargs):
         IOController.__init__(self)
@@ -19,13 +21,13 @@ class ApplicationIOController(IOController, Application):
         # queues for each address
         self.queue_by_address = {}
 
-    def process_io(self, iocb: IOCB):
+    def _process_io(self, iocb: IOCB):
         # get the destination address from the pdu
         destination_address = iocb.args[0].pduDestination
         # look up the queue
         queue = self.queue_by_address.get(destination_address, None)
         if not queue:
-            queue = SieveQueue(self.request, destination_address)
+            queue = SieveQueue(self, destination_address)
             self.queue_by_address[destination_address] = queue
         # ask the queue to process the request
         queue.request_io(iocb)

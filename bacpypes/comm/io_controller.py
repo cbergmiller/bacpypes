@@ -8,19 +8,35 @@ __all__ = ['IOController']
 
 
 class IOController(object):
+    """
+    An IOController is an API for processing an IOCB.  It has one method
+    `process_io()` provided by a derived class which will be called for each IOCB
+    that is requested of it.  It calls one of its `complete_io()` or `abort_io()`
+    functions as necessary to satisfy the request.
 
+    This class does not restrict a controller from processing more than one
+    IOCB simultaneously.
+    """
     def __init__(self, name=None):
         """Initialize a controller."""
         _logger.debug(f'__init__ name={name!r}')
         # save the name
         self.name = name
 
-    def abort(self, err):
-        """Abort all requests, no default implementation."""
+    def abort(self, err: Exception):
+        """
+        This method is called to abort all of the IOCBs associated with the controller.
+        There is no default implementation of this method.
+        :param err: the error to be returned
+        """
         pass
 
     def request_io(self, iocb: IOCB):
-        """Called by a client to start processing a request."""
+        """
+        Execute an IO Request.
+        This method is called by the application requesting the service of a controller.
+        :param iocb: the IOCB to be processed
+        """
         _logger.debug(f'request_io {iocb!r}')
         # check that the parameter is an IOCB
         if not isinstance(iocb, IOCB):
@@ -31,17 +47,31 @@ class IOController(object):
             # change the state
             iocb.io_state = PENDING
             # let derived class figure out how to process this
-            self.process_io(iocb)
+            self._process_io(iocb)
         except Exception as e:
             # if there was an error, abort the request
             self.abort_io(iocb, e)
 
-    def process_io(self, iocb):
-        """Figure out how to respond to this request.  This must be provided by the derived class."""
+    def _process_io(self, iocb):
+        """
+        Figure out how to respond to this request.  This must be provided by the derived class.
+        The implementation of `process_io()` should be written using "functional
+        programming" principles by not modifying the arguments or keyword arguments
+        in the IOCB, and without side effects that would require the application
+        using the controller to submit IOCBs in a particular order.  There may be
+        occasions following a "remote procedure call" model where the application
+        making the request is not in the same process, or even on the same machine,
+        as the controller providing the functionality.
+        :param iocb: the IOCB to be processed
+        """
         raise NotImplementedError('IOController must implement process_io()')
 
-    def active_io(self, iocb):
-        """Called by a handler to notify the controller that a request is being processed."""
+    def active_io(self, iocb: IOCB):
+        """
+        This method is called by the derived class when it would like to signal
+        to other types of applications that the IOCB is being processed.
+        :param iocb: the IOCB being processed
+        """
         _logger.debug('active_io {iocb!r}')
         # requests should be idle or pending before coming active
         if (iocb.io_state != IDLE) and (iocb.io_state != PENDING):
@@ -49,8 +79,16 @@ class IOController(object):
         # change the state
         iocb.io_state = ACTIVE
 
-    def complete_io(self, iocb, msg):
-        """Called by a handler to return data to the client."""
+    def complete_io(self, iocb: IOCB, msg):
+        """
+        This method is called by the derived class when the IO processing is
+        complete.  The `msg`, which may be None, is put in the `ioResponse`
+        attribute of the IOCB which is then triggered.
+        IOController derived classes should call this function rather than
+        the `complete()` function of the IOCB.
+        :param iocb: the IOCB to be processed
+        :param msg: the message to be returned
+        """
         _logger.debug(f'complete_io {iocb!r} {msg!r}')
         if iocb.io_state == COMPLETED:
             # if it completed, leave it alone
@@ -65,8 +103,16 @@ class IOController(object):
             # notify the client
             iocb.trigger()
 
-    def abort_io(self, iocb, err):
-        """Called by a handler or a client to abort a transaction."""
+    def abort_io(self, iocb: IOCB, err: Exception):
+        """
+        This method is called by the derived class when the IO processing has
+        encountered an error.  The `msg` is put in the `ioError`
+        attribute of the IOCB which is then triggered.
+        IOController derived classes should call this function rather than
+        the `abort()` function of the IOCB.
+        :param iocb: the IOCB to be processed
+        :param msg: the error to be returned
+        """
         _logger.debug(f'abort_io {iocb!r} {err!r}')
         if iocb.io_state == COMPLETED:
             # if it completed, leave it alone

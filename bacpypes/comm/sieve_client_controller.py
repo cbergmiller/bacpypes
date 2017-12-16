@@ -9,7 +9,17 @@ __all__ = ['SieveClientController']
 
 
 class SieveClientController(Client, IOController):
+    """
+    Similar to the `ClientController`, this class is a controller that also
+    sits at the top of a protocol stack as a client.  The IOCBs to be processed
+    contain a single PDU parameter with a `pduDestination` address.  Unlike
+    the `ClientController`, this class creates individual queues for each
+    destination address so it can process multiple requests simultaneously while
+    maintaining a strict master/slave relationship with each address.
 
+    When an upstream PDU is received, the `pduSource` address is used to
+    associate this response with the correct request.
+    """
     def __init__(self, queue_class=SieveQueue):
         _logger.debug("__init__")
         Client.__init__(self)
@@ -21,7 +31,7 @@ class SieveClientController(Client, IOController):
         self.queues = {}
         self.queue_class = queue_class
 
-    def process_io(self, iocb):
+    def _process_io(self, iocb):
         _logger.debug("process_io %r", iocb)
         # get the destination address from the pdu
         destination_address = iocb.args[0].pduDestination
@@ -30,7 +40,7 @@ class SieveClientController(Client, IOController):
         queue = self.queues.get(destination_address, None)
         if not queue:
             _logger.debug("    - new queue")
-            queue = self.queue_class(self.request, destination_address)
+            queue = self.queue_class(self, destination_address)
             self.queues[destination_address] = queue
         _logger.debug("    - queue: %r", queue)
         # ask the queue to process the request

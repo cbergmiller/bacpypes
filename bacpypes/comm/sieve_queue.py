@@ -7,17 +7,20 @@ __all__ = ['SieveQueue']
 
 
 class SieveQueue(IOQController):
-    # ToDo: what is this for?
-    def __init__(self, request_fn, address=None):
-        _logger.debug("__init__ %r %r", request_fn, address)
+    """
+    Queued IO Controller that passes requests back to the controller that manages the queues.
+    """
+    def __init__(self, master_controller, address=None):
+        _logger.debug("__init__ %r %r", master_controller, address)
+        assert hasattr(master_controller, 'request')
         IOQController.__init__(self, str(address))
         # save a reference to the request function
-        self.request_fn = request_fn
+        self.master_controller = master_controller
         self.address = address
 
-    def process_io(self, iocb):
+    def _process_io(self, iocb):
         _logger.debug("process_io %r", iocb)
         # this is now an active request
         self.active_io(iocb)
         # send the request
-        self.request_fn(iocb.args[0])
+        self.master_controller.request(iocb.args[0])

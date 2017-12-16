@@ -9,6 +9,15 @@ __all__ = ['IOChain']
 
 
 class IOChain(IOCB, DebugContents):
+    """
+    An IOChain is a class that is an IOCB that includes the IOChain API.
+    Chains are used by controllers when they need the services of some other
+    controller and results need to be processed further.
+
+    Controllers that operate this way are similar to an adapter, they take
+    arguments in one form, encode them in some way in an IOCB, pass it to the
+    other controller, then decode the results.
+    """
     _debug_contents = ('ioChain++',)
 
     def __init__(self, chain: IOCB, *args, **kwargs):
@@ -37,8 +46,14 @@ class IOChain(IOCB, DebugContents):
             _logger.exception("    - encoding exception: %r", e)
             chain.abort(e)
 
-    def chain_callback(self, iocb):
-        """Callback when this iocb completes."""
+    def chain_callback(self, iocb: IOCB):
+        """
+        When a chained IOCB has completed, the results are translated or
+        decoded for the next higher level of the application.  The `iocb`
+        parameter is redundant because the IOCB becomes its own controller,
+        but the callback API requires the parameter.
+        :param iocb: the IOCB that has completed, which is itself
+        """
         _logger.debug("chain_callback %r", iocb)
         # if we're not chained, there's no notification to do
         if not self.ioChain:
@@ -61,8 +76,15 @@ class IOChain(IOCB, DebugContents):
         # notify the client
         iocb.trigger()
 
-    def abort_io(self, iocb, err):
-        """Forward the abort downstream."""
+    def abort_io(self, iocb: IOCB, err: Exception):
+        """
+        Call this method to abort the IOCB, which will in turn cascade the
+        abort operation to the chained IOCBs.  This has the same function
+        signature that is used by an IOController because this instance
+        becomes its own controller.
+        :param iocb: the IOCB that is being aborted
+        :param err: the error to be used as the abort reason
+        """
         _logger.debug("abort_io %r %r", iocb, err)
         # make sure we're being notified of an abort request from
         # the iocb we are chained from
@@ -73,12 +95,20 @@ class IOChain(IOCB, DebugContents):
         self.abort(err)
 
     def encode(self):
-        """Hook to transform the request, called when this IOCB is chained."""
+        """
+        This method is called to transform the arguments and keyword arguments
+        into something suitable for the other controller.  It is typically
+        overridden by a derived class to perform this function.
+        """
         _logger.debug("encode")
         # by default do nothing, the arguments have already been supplied
 
     def decode(self):
-        """Hook to transform the response, called when this IOCB is completed."""
+        """
+        This method is called to transform the result or error returned by
+        the other controller into something suitable to return.  It is typically
+        overridden by a derived class to perform this function.
+        """
         _logger.debug("decode")
         # refer to the chained iocb
         iocb = self.ioChain

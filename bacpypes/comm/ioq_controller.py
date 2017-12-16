@@ -6,6 +6,7 @@ from ..core import deferred
 from .iocb_states import *
 from .io_controller import IOController
 from .io_queue import IOQueue
+from .iocb import IOCB
 
 _logger = logging.getLogger(__name__)
 __all__ = ['IOQController']
@@ -21,7 +22,9 @@ _strftime = lambda: "%011.6f" % (time.time() % 3600,)
 
 class IOQController(IOController):
     """
-    IO-Queue-Controller
+    Queued IO Controller
+    An `IOQController` has an identical interface as the `IOContoller`, but
+    provides additional hooks to make sure that only one IOCB is being processed at a time.
     """
     wait_time = 0.0
 
@@ -35,18 +38,20 @@ class IOQController(IOController):
         # no active iocb
         self.active_iocb = None
         # create an IOQueue for iocb's requested when not idle
-        self.io_queue = IOQueue(f'{name} queue')
+        self.io_queue = IOQueue()
 
-    def abort(self, err):
-        """Abort all pending requests."""
+    def abort(self, err: Exception):
+        """
+        This method is called to abort all of the IOCBs associated with the controller.
+        All of the queued IOCBs will be aborted with this error.
+        :param err: the error to be returned
+        """
         _logger.debug(f'abort {err!r}')
         if self.state == CTRL_IDLE:
             _logger.debug('    - idle')
             return
-        while True:
+        while not self.io_queue.empty:
             iocb = self.io_queue.get()
-            if not iocb:
-                break
             _logger.debug(f'    - iocb: {iocb!r}')
             # change the state
             iocb.io_state = ABORTED
@@ -56,8 +61,13 @@ class IOQController(IOController):
         if self.state != CTRL_IDLE:
             _logger.debug('    - busy after aborts')
 
-    def request_io(self, iocb):
-        """Called by a client to start processing a request."""
+    def request_io(self, iocb: IOCB):
+        """
+        This method is called by the application requesting the service of a
+        controller.  If the controller is already busy processing a request,
+        this IOCB is queued until the current processing is complete.
+        :param iocb: the IOCB to be processed
+        """
         _logger.debug(f'request_io {iocb!r}')
         # bind the iocb to this controller
         iocb.io_controller = self
@@ -69,18 +79,18 @@ class IOQController(IOController):
             return
         try:
             # let derived class figure out how to process this
-            self.process_io(iocb)
+            self._process_io(iocb)
         except Exception as e:
             _logger.debug(f'    - process_io() exception: {e!r}')
             # if there was an error, abort the request
             _logger.debug('    - aborting')
             self.abort_io(iocb, e)
 
-    def process_io(self, iocb):
+    def _process_io(self, iocb: IOCB):
         """Figure out how to respond to this request.  This must be provided by the derived class."""
         raise NotImplementedError('IOController must implement process_io()')
 
-    def active_io(self, iocb):
+    def active_io(self, iocb: IOCB):
         """Called by a handler to notify the controller that a request is being processed."""
         _logger.debug('active_io %r', iocb)
         # base class work first, setting iocb state and timer data
@@ -91,8 +101,11 @@ class IOQController(IOController):
         # keep track of the iocb
         self.active_iocb = iocb
 
-    def complete_io(self, iocb, msg):
-        """Called by a handler to return data to the client."""
+    def complete_io(self, iocb: IOCB, msg):
+        """
+        Called by a handler to return data to the client.
+        :param msg: positive result of request
+        """
         _logger.debug(f'complete_io {iocb!r} {msg!r}')
         # check to see if it is completing the active one
         if iocb is not self.active_iocb:
@@ -139,15 +152,18 @@ class IOQController(IOController):
             # if we are busy, do nothing
             _logger.debug('    - not idle')
             return
-        if self.io_queue.empty:
-            # if there is nothing to do, return
-            _logger.debug('    - empty queue')
-            return
-        # get the next iocb
-        iocb = self.io_queue.get()
+        # get the next (not aborted) IOCB
+        while True:
+            if self.io_queue.empty:
+                # if there is nothing to do, return
+                _logger.debug('    - empty queue')
+                return
+            iocb = self.io_queue.get()
+            if iocb.io_state != ABORTED:
+                break
         try:
             # let derived class figure out how to process this
-            self.process_io(iocb)
+            self._process_io(iocb)
         except Exception as e:
             # if there was an error, abort the request
             self.abort_io(iocb, e)
