@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import logging
-from ..debugging import bacpypes_debugging, ModuleLogger
 from ..comm import Capability
 from ..object import FileObject
 

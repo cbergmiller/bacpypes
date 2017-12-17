@@ -5,7 +5,6 @@ Detection
 """
 
 import logging
-from bacpypes.debugging import bacpypes_debugging, ModuleLogger
 from bacpypes.core import deferred
 
 _logger = logging.getLogger(__name__)

@@ -2,7 +2,6 @@
 import pickle
 import logging
 
-from ..debugging import bacpypes_debugging
 from ..task import call_later
 
 

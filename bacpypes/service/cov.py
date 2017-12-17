@@ -5,7 +5,7 @@ Change Of Value Service
 """
 import time
 import logging
-from ..debugging import bacpypes_debugging, DebugContents, ModuleLogger
+from ..debugging import DebugContents
 from ..comm import Capability, IOCB
 from ..task import call_later
 from ..basetypes import DeviceAddress, COVSubscription, PropertyValue, \
@@ -20,6 +20,7 @@ from ..object import Property
 from .detect import DetectionAlgorithm, monitor_filter
 
 _logger = logging.getLogger(__name__)
+
 
 class SubscriptionList:
 

@@ -18,11 +18,9 @@ def btox(data, sep=''):
     """Return the hex encoding of a blob (byte string)."""
     # translate the blob into hex
     hex_str = str(binascii.hexlify(data), 'ascii')
-
     # inject the separator if it was given
     if sep:
         hex_str = sep.join(hex_str[i:i+2] for i in range(0, len(hex_str), 2))
-
     # return the result
     return hex_str
 
@@ -31,10 +29,8 @@ def xtob(data, sep=''):
     """Interpret the hex encoding of a blob (byte string)."""
     # remove the non-hex characters
     data = re.sub("[^0-9a-fA-F]", '', data)
-
     # interpret the hex
     return binascii.unhexlify(data)
-
 
 
 def ModuleLogger(globs):
@@ -207,41 +203,3 @@ class LoggingFormatter(logging.Formatter):
             msg = '\n    '.join(record_attrs)
         return msg
 
-
-def bacpypes_debugging(obj):
-    """Function for attaching a debugging logger to a class or function."""
-    # create a logger for this object
-    logger = logging.getLogger(obj.__module__ + '.' + obj.__name__)
-    # make it available to instances
-    obj._logger = logger
-    obj._debug = logger.debug
-    obj._info = logger.info
-    obj._warning = logger.warning
-    obj._error = logger.error
-    obj._exception = logger.exception
-    obj._fatal = logger.fatal
-
-    return obj
-
-
-class _LoggingMetaclass(type):
-
-    def __init__(cls, *args):
-        # wrap the class
-        bacpypes_debugging(cls)
-
-
-class Logging(object):
-    __metaclass__ = _LoggingMetaclass
-
-
-def class_debugging(cls):
-    """Add the debugging logger to the class."""
-    bacpypes_debugging(cls)
-    return cls
-
-
-def function_debugging(f):
-    """Add the debugging logger to the function."""
-    bacpypes_debugging(f)
-    return f

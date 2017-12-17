@@ -8,14 +8,11 @@ import sys
 import logging
 from .errors import DecodingError, \
     MissingRequiredParameter, InvalidParameterDatatype, InvalidTag
-from .debugging import ModuleLogger, bacpypes_debugging
 
 from .primitivedata import Atomic, ClosingTag, OpeningTag, Tag, TagList, \
     Unsigned
 
 DEBUG = False
-
-# some debugging
 _logger = logging.getLogger(__name__)
 
 
@@ -995,11 +992,10 @@ class Any:
         return rslt_list
 
 
-@bacpypes_debugging
 class AnyAtomic:
 
     def __init__(self, arg=None):
-        if DEBUG: _logger.debug("__init__ %r", arg)
+        if DEBUG: _logger.debug('__init__ %r', arg)
         # default to no value
         self.value = None
         if arg is None:
@@ -1009,25 +1005,24 @@ class AnyAtomic:
         elif isinstance(arg, Tag):
             self.value = arg.app_to_object()
         else:
-            raise TypeError("invalid constructor datatype")
+            raise TypeError('invalid constructor datatype')
 
     def encode(self, tag):
-        if DEBUG: _logger.debug("encode %r", tag)
+        if DEBUG: _logger.debug('encode %r', tag)
         self.value.encode(tag)
 
     def decode(self, tag):
-        if DEBUG: _logger.debug("decode %r", tag)
+        if DEBUG: _logger.debug('decode %r', tag)
         if tag.tagClass != Tag.applicationTagClass:
-            raise ValueError("application tag required")
+            raise ValueError('application tag required')
         # get the data
         self.value = tag.app_to_object()
 
     def __str__(self):
-        return "AnyAtomic(%s)" % (str(self.value),)
+        return f'AnyAtomic({self.value})'
 
     def __repr__(self):
-        desc = self.__module__ + '.' + self.__class__.__name__
+        desc = f'{self.__module__}.{self.__class__.__name__}'
         if self.value:
-            desc += "(" + self.value.__class__.__name__ + ")"
-            desc += ' ' + str(self.value)
-        return '<' + desc + ' instance at 0x%08x' % (id(self),) + '>'
+            desc += f'({self.value.__class__.__name__}) {self.value}'
+        return f'<{desc} instance at 0x{id(self):08x}>'

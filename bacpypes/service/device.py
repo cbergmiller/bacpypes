@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 import logging
-from ..debugging import bacpypes_debugging, ModuleLogger
 from ..comm import Capability
 from ..link import GlobalBroadcast
 from ..primitivedata import Date, Time, ObjectIdentifier
 from ..constructeddata import ArrayOf
-from ..apdu import WhoIsRequest, IAmRequest, IHaveRequest, SimpleAckPDU, Error
+from ..apdu import WhoIsRequest, IAmRequest, IHaveRequest, SimpleAckPDU
 from ..errors import ExecutionError, InconsistentParameters, \
     MissingRequiredParameter, ParameterOutOfRange
 from ..object import register_object_type, registered_object_types, \

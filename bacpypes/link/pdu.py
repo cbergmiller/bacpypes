@@ -9,7 +9,7 @@ try:
 except ImportError:
     netifaces = None
 
-from ..debugging import ModuleLogger, bacpypes_debugging, btox, xtob
+from ..debugging import btox
 from ..comm import PDUData
 from .pci import PCI
 

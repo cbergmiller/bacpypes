@@ -5,7 +5,6 @@
 #
 #from . import comm
 from . import task
-from . import singleton
 #from . import capability
 #from . import iocb
 

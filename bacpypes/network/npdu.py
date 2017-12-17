@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import logging
-from ..debugging import ModuleLogger, DebugContents, bacpypes_debugging, btox
+from ..debugging import DebugContents
 from .npci import NPCI
 from ..comm import PDUData
 
@@ -19,11 +19,7 @@ def register_npdu_type(klass):
     npdu_types[klass.messageType] = klass
 
 
-#
-#   NPDU
-#
 
-@bacpypes_debugging
 class NPDU(NPCI, PDUData):
 
     def __init__(self, *args, **kwargs):
