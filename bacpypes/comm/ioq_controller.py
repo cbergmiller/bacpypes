@@ -81,7 +81,7 @@ class IOQController(IOController):
             # let derived class figure out how to process this
             self._process_io(iocb)
         except Exception as e:
-            _logger.debug(f'    - process_io() exception: {e!r}')
+            _logger.warning(f'    - process_io() exception: {e!r}')
             # if there was an error, abort the request
             _logger.debug('    - aborting')
             self.abort_io(iocb, e)

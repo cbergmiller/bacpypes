@@ -1,9 +1,12 @@
-# BACpypes
+# Asnyc. BACpypes
 
-BACpypes provides a BACnet application layer and network layer written in Python for daemons, scripting, and graphical interfaces.
-This is the current project, not the one over on SourceForge.
+This is a diverging fork of the BACpypes python package.
+The goals of development are:
 
-[![Join the chat at https://gitter.im/JoelBender/bacpypes](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/JoelBender/bacpypes?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+- Removal of asyncore dependecy and the bacpypes.core event loop in favour of asyncio
+- Refactored project structure (one class per module where feasible)
+- Reduction of multiple inheritance and overall amount of code (for easier maintenance)
+- PEP8 compliant code refactoring
+- Simplified asynchronous application API
 
-[![Documentation Status](https://readthedocs.org/projects/bacpypes/badge/?version=latest)](http://bacpypes.readthedocs.io/en/latest/?badge=latest)
-  
+This package will only run at Python 3.6 and above.

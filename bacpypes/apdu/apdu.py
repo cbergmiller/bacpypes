@@ -4,10 +4,8 @@
 Application Layer Protocol Data Units
 """
 import logging
-from ..errors import DecodingError, TooManyArguments
-
+from ..errors import TooManyArguments
 from ..comm import PDUData
-from ..link import PCI
 from ..primitivedata import Boolean, CharacterString, Enumerated, Integer, \
     ObjectIdentifier, ObjectType, OctetString, Real, TagList, Unsigned, \
     expand_enumerations
@@ -17,15 +15,16 @@ from ..basetypes import ChannelValue, DateTime, DeviceAddress, ErrorType, \
     NotificationParameters, NotifyType, ObjectPropertyReference, \
     PropertyIdentifier, PropertyReference, PropertyValue, RecipientProcess, \
     ResultFlags, Segmentation, TimeStamp, VTClass
+from .apci import APCI
+from .registry import *
 
 _logger = logging.getLogger(__name__)
 __all__ = [
-    'apdu_types', 'APCI', 'APDU', 'unconfirmed_request_types', 'confirmed_request_types', 'complex_ack_types',
-    'error_types', 'ConfirmedRequestPDU', 'UnconfirmedRequestPDU', 'SimpleAckPDU',
-    'ComplexAckPDU', 'SegmentAckPDU', 'ErrorPDU', 'RejectReason', 'RejectPDU', 'AbortPDU', 'APCISequence',
-    'ConfirmedRequestSequence', 'ComplexAckSequence', 'UnconfirmedRequestSequence', 'ErrorSequence', 'Error',
-    'ChangeListError', 'CreateObjectError', 'ConfirmedPrivateTransferError', 'WritePropertyMultipleError',
-    'VTCloseError', 'ReadPropertyRequest', 'ReadPropertyACK', 'ReadAccessSpecification', 'ReadPropertyMultipleRequest',
+    'APDU', 'ConfirmedRequestPDU', 'UnconfirmedRequestPDU', 'SimpleAckPDU', 'ComplexAckPDU', 'SegmentAckPDU',
+    'ErrorPDU', 'RejectReason', 'RejectPDU', 'AbortPDU', 'APCISequence', 'ConfirmedRequestSequence',
+    'ComplexAckSequence', 'UnconfirmedRequestSequence', 'ErrorSequence', 'Error', 'ChangeListError',
+    'CreateObjectError', 'ConfirmedPrivateTransferError', 'WritePropertyMultipleError', 'VTCloseError',
+    'ReadPropertyRequest', 'ReadPropertyACK', 'ReadAccessSpecification', 'ReadPropertyMultipleRequest',
     'ReadAccessResultElementChoice', 'ReadPropertyMultipleACK', 'ReadAccessResultElement', 'ReadAccessResult',
     'EventNotificationParameters', 'AbortReason', 'ConfirmedServiceChoice', 'UnconfirmedServiceChoice', 'WhoIsRequest',
     'WhoHasRequest', 'IAmRequest', 'IHaveRequest', 'ConfirmedCOVNotificationRequest', 'PropertyReference',
@@ -33,81 +32,30 @@ __all__ = [
     'AtomicReadFileACKAccessMethodRecordAccess', 'AtomicReadFileACKAccessMethodStreamAccess', 'AtomicWriteFileACK'
 ]
 
-# a dictionary of message type values and classes
-apdu_types = {}
+_max_apdu_response_encoding = [
+    50, 128, 206, 480, 1024, 1476, None, None, None, None, None, None, None, None, None, None
+]
 
-
-def register_apdu_type(klass):
-    apdu_types[klass.pduType] = klass
-
-
-# a dictionary of confirmed request choices and classes
-confirmed_request_types = {}
-
-
-def register_confirmed_request_type(klass):
-    confirmed_request_types[klass.serviceChoice] = klass
-
-
-# a dictionary of complex ack choices and classes
-complex_ack_types = {}
-
-
-def register_complex_ack_type(klass):
-    complex_ack_types[klass.serviceChoice] = klass
-
-
-# a dictionary of unconfirmed request choices and classes
-unconfirmed_request_types = {}
-
-
-def register_unconfirmed_request_type(klass):
-    unconfirmed_request_types[klass.serviceChoice] = klass
-
-
-# a dictionary of unconfirmed request choices and classes
-error_types = {}
-
-
-def register_error_type(klass):
-    error_types[klass.serviceChoice] = klass
-
-
-#
-#   encode_max_segments_accepted/decode_max_segments_accepted
-#
 
 def encode_max_segments_accepted(arg):
-    """Encode the maximum number of segments the device will accept, Section
-    20.1.2.4"""
+    """Encode the maximum number of segments the device will accept, Section 20.1.2.4"""
     w = 0
-    while (arg and not arg & 1):
+    while arg and not arg & 1:
         w += 1
         arg = (arg >> 1)
     return w
 
 
 def decode_max_segments_accepted(arg):
-    """Decode the maximum number of segments the device will accept, Section
-    20.1.2.4"""
+    """Decode the maximum number of segments the device will accept, Section 20.1.2.4"""
     return arg and (1 << arg) or None
 
 
-#
-#   encode_max_apdu_length_accepted/decode_max_apdu_length_accepted
-#
-
-_max_apdu_response_encoding = [50, 128, 206, 480, 1024, 1476, None, None, None, None, None, None, None, None, None,
-                               None]
-
-
 def encode_max_apdu_length_accepted(arg):
-    """Return the encoding of the highest encodable value less than the
-    value of the arg."""
+    """Return the encoding of the highest encodable value less than the value of the arg."""
     for i in range(5, -1, -1):
-        if (arg >= _max_apdu_response_encoding[i]):
+        if arg >= _max_apdu_response_encoding[i]:
             return i
-
     raise ValueError(f'invalid max APDU length accepted: {arg}')
 
 
@@ -115,235 +63,7 @@ def decode_max_apdu_length_accepted(arg):
     v = _max_apdu_response_encoding[arg]
     if not v:
         raise ValueError(f'invalid max APDU length accepted: {arg}')
-
     return v
-
-
-class APCI(PCI):
-    """
-    APCI
-    """
-    _debug_contents = (
-        'apduType', 'apduSeg', 'apduMor', 'apduSA', 'apduSrv', 'apduNak', 'apduSeq', 'apduWin', 'apduMaxSegs',
-        'apduMaxResp', 'apduService', 'apduInvokeID', 'apduAbortRejectReason'
-    )
-
-    def __init__(self, *args, **kwargs):
-        super(APCI, self).__init__(*args, **kwargs)
-
-        self.apduType = None
-        self.apduSeg = None  # segmented
-        self.apduMor = None  # more follows
-        self.apduSA = None  # segmented response accepted
-        self.apduSrv = None  # sent by server
-        self.apduNak = None  # negative acknowledgement
-        self.apduSeq = None  # sequence number
-        self.apduWin = None  # actual/proposed window size
-        self.apduMaxSegs = None  # maximum segments accepted (decoded)
-        self.apduMaxResp = None  # max response accepted (decoded)
-        self.apduService = None  #
-        self.apduInvokeID = None  #
-        self.apduAbortRejectReason = None  #
-
-    def update(self, apci):
-        PCI.update(self, apci)
-        self.apduType = apci.apduType
-        self.apduSeg = apci.apduSeg
-        self.apduMor = apci.apduMor
-        self.apduSA = apci.apduSA
-        self.apduSrv = apci.apduSrv
-        self.apduNak = apci.apduNak
-        self.apduSeq = apci.apduSeq
-        self.apduWin = apci.apduWin
-        self.apduMaxSegs = apci.apduMaxSegs
-        self.apduMaxResp = apci.apduMaxResp
-        self.apduService = apci.apduService
-        self.apduInvokeID = apci.apduInvokeID
-        self.apduAbortRejectReason = apci.apduAbortRejectReason
-
-    def __repr__(self):
-        """Return a string representation of the PDU."""
-        sname = self.__module__ + '.' + self.__class__.__name__
-        # expand the type if possible
-        stype = apdu_types.get(self.apduType, None)
-        if stype:
-            stype = stype.__name__
-        else:
-            stype = '?'
-        # add the invoke ID if it has one
-        if self.apduInvokeID is not None:
-            stype += ',' + str(self.apduInvokeID)
-        return f'<{sname}({stype}) instance at {hex(id(self))}>'
-
-    def encode(self, pdu):
-        """encode the contents of the APCI into the PDU."""
-        PCI.update(pdu, self)
-        if self.apduType == ConfirmedRequestPDU.pduType:
-            # PDU type
-            buff = self.apduType << 4
-            if self.apduSeg:
-                buff += 0x08
-            if self.apduMor:
-                buff += 0x04
-            if self.apduSA:
-                buff += 0x02
-            pdu.put(buff)
-            pdu.put((encode_max_segments_accepted(self.apduMaxSegs) << 4) + encode_max_apdu_length_accepted(
-                self.apduMaxResp))
-            pdu.put(self.apduInvokeID)
-            if self.apduSeg:
-                pdu.put(self.apduSeq)
-                pdu.put(self.apduWin)
-            pdu.put(self.apduService)
-
-        elif self.apduType == UnconfirmedRequestPDU.pduType:
-            pdu.put(self.apduType << 4)
-            pdu.put(self.apduService)
-
-        elif self.apduType == SimpleAckPDU.pduType:
-            pdu.put(self.apduType << 4)
-            pdu.put(self.apduInvokeID)
-            pdu.put(self.apduService)
-
-        elif self.apduType == ComplexAckPDU.pduType:
-            # PDU type
-            buff = self.apduType << 4
-            if self.apduSeg:
-                buff += 0x08
-            if self.apduMor:
-                buff += 0x04
-            pdu.put(buff)
-            pdu.put(self.apduInvokeID)
-            if self.apduSeg:
-                pdu.put(self.apduSeq)
-                pdu.put(self.apduWin)
-            pdu.put(self.apduService)
-
-        elif self.apduType == SegmentAckPDU.pduType:
-            # PDU type
-            buff = self.apduType << 4
-            if self.apduNak:
-                buff += 0x02
-            if self.apduSrv:
-                buff += 0x01
-            pdu.put(buff)
-            pdu.put(self.apduInvokeID)
-            pdu.put(self.apduSeq)
-            pdu.put(self.apduWin)
-
-        elif self.apduType == ErrorPDU.pduType:
-            pdu.put(self.apduType << 4)
-            pdu.put(self.apduInvokeID)
-            pdu.put(self.apduService)
-
-        elif self.apduType == RejectPDU.pduType:
-            pdu.put(self.apduType << 4)
-            pdu.put(self.apduInvokeID)
-            pdu.put(self.apduAbortRejectReason)
-
-        elif self.apduType == AbortPDU.pduType:
-            # PDU type
-            buff = self.apduType << 4
-            if self.apduSrv:
-                buff += 0x01
-            pdu.put(buff)
-            pdu.put(self.apduInvokeID)
-            pdu.put(self.apduAbortRejectReason)
-
-        else:
-            raise ValueError('invalid APCI.apduType')
-
-    def decode(self, pdu):
-        """decode the contents of the PDU into the APCI."""
-        _logger.debug(f'APCI.decode {pdu!r}')
-        PCI.update(self, pdu)
-        # decode the first octet
-        buff = pdu.get()
-        # decode the APCI type
-        self.apduType = (buff >> 4) & 0x0F
-
-        # ToDo: warum hat die Basisklasse Verweise zu manchen erbenden Klassen? Grausiges Design!
-        if self.apduType == ConfirmedRequestPDU.pduType:
-            self.apduSeg = ((buff & 0x08) != 0)
-            self.apduMor = ((buff & 0x04) != 0)
-            self.apduSA = ((buff & 0x02) != 0)
-            buff = pdu.get()
-            self.apduMaxSegs = decode_max_segments_accepted((buff >> 4) & 0x07)
-            self.apduMaxResp = decode_max_apdu_length_accepted(buff & 0x0F)
-            self.apduInvokeID = pdu.get()
-            if self.apduSeg:
-                self.apduSeq = pdu.get()
-                self.apduWin = pdu.get()
-            self.apduService = pdu.get()
-            self.pduData = pdu.pduData
-        elif self.apduType == UnconfirmedRequestPDU.pduType:
-            self.apduService = pdu.get()
-            self.pduData = pdu.pduData
-        elif self.apduType == SimpleAckPDU.pduType:
-            self.apduInvokeID = pdu.get()
-            self.apduService = pdu.get()
-        elif self.apduType == ComplexAckPDU.pduType:
-            self.apduSeg = ((buff & 0x08) != 0)
-            self.apduMor = ((buff & 0x04) != 0)
-            self.apduInvokeID = pdu.get()
-            if self.apduSeg:
-                self.apduSeq = pdu.get()
-                self.apduWin = pdu.get()
-            self.apduService = pdu.get()
-            self.pduData = pdu.pduData
-        elif self.apduType == SegmentAckPDU.pduType:
-            self.apduNak = ((buff & 0x02) != 0)
-            self.apduSrv = ((buff & 0x01) != 0)
-            self.apduInvokeID = pdu.get()
-            self.apduSeq = pdu.get()
-            self.apduWin = pdu.get()
-        elif self.apduType == ErrorPDU.pduType:
-            self.apduInvokeID = pdu.get()
-            self.apduService = pdu.get()
-            self.pduData = pdu.pduData
-        elif self.apduType == RejectPDU.pduType:
-            self.apduInvokeID = pdu.get()
-            self.apduAbortRejectReason = pdu.get()
-        elif self.apduType == AbortPDU.pduType:
-            self.apduSrv = ((buff & 0x01) != 0)
-            self.apduInvokeID = pdu.get()
-            self.apduAbortRejectReason = pdu.get()
-            self.pduData = pdu.pduData
-        else:
-            raise DecodingError('invalid APDU type')
-
-    def apci_contents(self, use_dict=None, as_class=dict):
-        """
-        Return the contents of an object as a dict.
-        """
-        # make/extend the dictionary of content
-        if use_dict is None:
-            use_dict = as_class()
-        # copy the source and destination to make it easier to search
-        if self.pduSource:
-            use_dict.__setitem__('source', str(self.pduSource))
-        if self.pduDestination:
-            use_dict.__setitem__('destination', str(self.pduDestination))
-        # loop through the elements
-        for attr in APCI._debug_contents:
-            value = getattr(self, attr, None)
-            if value is None:
-                continue
-            if attr == 'apduType':
-                mapped_value = apdu_types[self.apduType].__name__
-            elif attr == 'apduService':
-                if self.apduType in (ConfirmedRequestPDU.pduType, SimpleAckPDU.pduType, ComplexAckPDU.pduType):
-                    mapped_value = confirmed_request_types[self.apduService].__name__
-                elif self.apduType == UnconfirmedRequestPDU.pduType:
-                    mapped_value = unconfirmed_request_types[self.apduService].__name__
-                elif self.apduType == ErrorPDU.pduType:
-                    mapped_value = error_types[self.apduService].__name__
-            else:
-                mapped_value = value
-            # save the mapped value
-            use_dict.__setitem__(attr, mapped_value)
-        # return what we built/updated
-        return use_dict
 
 
 class APDU(APCI, PDUData):
@@ -424,6 +144,40 @@ class ConfirmedRequestPDU(_APDU):
         self.apduService = choice
         self.pduExpectingReply = 1
 
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        # PDU type
+        buff = apci.apduType << 4
+        if apci.apduSeg:
+            buff += 0x08
+        if apci.apduMor:
+            buff += 0x04
+        if apci.apduSA:
+            buff += 0x02
+        pdu.put(buff)
+        pdu.put((encode_max_segments_accepted(apci.apduMaxSegs) << 4) + encode_max_apdu_length_accepted(
+            apci.apduMaxResp))
+        pdu.put(apci.apduInvokeID)
+        if apci.apduSeg:
+            pdu.put(apci.apduSeq)
+            pdu.put(apci.apduWin)
+        pdu.put(apci.apduService)
+
+    @staticmethod
+    def decode(apci, pdu, buff):
+        apci.apduSeg = ((buff & 0x08) != 0)
+        apci.apduMor = ((buff & 0x04) != 0)
+        apci.apduSA = ((buff & 0x02) != 0)
+        buff = pdu.get()
+        apci.apduMaxSegs = decode_max_segments_accepted((buff >> 4) & 0x07)
+        apci.apduMaxResp = decode_max_apdu_length_accepted(buff & 0x0F)
+        apci.apduInvokeID = pdu.get()
+        if apci.apduSeg:
+            apci.apduSeq = pdu.get()
+            apci.apduWin = pdu.get()
+        apci.apduService = pdu.get()
+        apci.pduData = pdu.pduData
+
 
 register_apdu_type(ConfirmedRequestPDU)
 
@@ -436,9 +190,22 @@ class UnconfirmedRequestPDU(_APDU):
 
     def __init__(self, choice=None, *args, **kwargs):
         super(UnconfirmedRequestPDU, self).__init__(*args, **kwargs)
-
         self.apduType = UnconfirmedRequestPDU.pduType
         self.apduService = choice
+
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        pdu.put(apci.apduType << 4)
+        pdu.put(apci.apduService)
+
+    @staticmethod
+    def decode(apci, pdu, buff):
+        apci.apduService = pdu.get()
+        apci.pduData = pdu.pduData
+
+    @staticmethod
+    def get_service_name(apdu_servive: int):
+        return unconfirmed_request_types[apdu_servive].__name__
 
 
 register_apdu_type(UnconfirmedRequestPDU)
@@ -452,15 +219,28 @@ class SimpleAckPDU(_APDU):
 
     def __init__(self, choice=None, invokeID=None, context=None, *args, **kwargs):
         super(SimpleAckPDU, self).__init__(*args, **kwargs)
-
         self.apduType = SimpleAckPDU.pduType
         self.apduService = choice
         self.apduInvokeID = invokeID
-
         # use the context to fill in most of the fields
         if context is not None:
             self.apduService = context.apduService
             self.set_context(context)
+
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        pdu.put(apci.apduType << 4)
+        pdu.put(apci.apduInvokeID)
+        pdu.put(apci.apduService)
+
+    @staticmethod
+    def decode_pdu(apci, pdu, buff):
+        apci.apduInvokeID = pdu.get()
+        apci.apduService = pdu.get()
+
+    @staticmethod
+    def get_service_name(apdu_servive: int):
+        return confirmed_request_types[apdu_servive].__name__
 
 
 register_apdu_type(SimpleAckPDU)
@@ -482,6 +262,36 @@ class ComplexAckPDU(_APDU):
             self.apduService = context.apduService
             self.set_context(context)
 
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        # PDU type
+        buff = apci.apduType << 4
+        if apci.apduSeg:
+            buff += 0x08
+        if apci.apduMor:
+            buff += 0x04
+        pdu.put(buff)
+        pdu.put(apci.apduInvokeID)
+        if apci.apduSeg:
+            pdu.put(apci.apduSeq)
+            pdu.put(apci.apduWin)
+        pdu.put(apci.apduService)
+
+    @staticmethod
+    def decode_pdu(apci, pdu, buff):
+        apci.apduSeg = ((buff & 0x08) != 0)
+        apci.apduMor = ((buff & 0x04) != 0)
+        apci.apduInvokeID = pdu.get()
+        if apci.apduSeg:
+            apci.apduSeq = pdu.get()
+            apci.apduWin = pdu.get()
+        apci.apduService = pdu.get()
+        apci.pduData = pdu.pduData
+
+    @staticmethod
+    def get_service_name(apdu_servive: int):
+        return confirmed_request_types[apdu_servive].__name__
+
 
 register_apdu_type(ComplexAckPDU)
 
@@ -500,6 +310,31 @@ class SegmentAckPDU(_APDU):
         self.apduInvokeID = invokeID
         self.apduSeq = sequenceNumber
         self.apduWin = windowSize
+
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        # PDU type
+        buff = apci.apduType << 4
+        if apci.apduNak:
+            buff += 0x02
+        if apci.apduSrv:
+            buff += 0x01
+        pdu.put(buff)
+        pdu.put(apci.apduInvokeID)
+        pdu.put(apci.apduSeq)
+        pdu.put(apci.apduWin)
+
+    @staticmethod
+    def decode_pdu(apci, pdu, buff):
+        apci.apduNak = ((buff & 0x02) != 0)
+        apci.apduSrv = ((buff & 0x01) != 0)
+        apci.apduInvokeID = pdu.get()
+        apci.apduSeq = pdu.get()
+        apci.apduWin = pdu.get()
+
+    @staticmethod
+    def get_service_name(apdu_servive: int):
+        return confirmed_request_types[apdu_servive].__name__
 
 
 register_apdu_type(SegmentAckPDU)
@@ -521,6 +356,22 @@ class ErrorPDU(_APDU):
         if context is not None:
             self.apduService = context.apduService
             self.set_context(context)
+
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        pdu.put(apci.apduType << 4)
+        pdu.put(apci.apduInvokeID)
+        pdu.put(apci.apduService)
+
+    @staticmethod
+    def decode_pdu(apci, pdu, buff):
+        apci.apduInvokeID = pdu.get()
+        apci.apduService = pdu.get()
+        apci.pduData = pdu.pduData
+
+    @staticmethod
+    def get_service_name(apdu_servive: int):
+        return error_types[apdu_servive].__name__
 
 
 register_apdu_type(ErrorPDU)
@@ -553,16 +404,25 @@ class RejectPDU(_APDU):
 
     def __init__(self, invokeID=None, reason=None, context=None, *args, **kwargs):
         super(RejectPDU, self).__init__(*args, **kwargs)
-
         self.apduType = RejectPDU.pduType
         self.apduInvokeID = invokeID
         if isinstance(reason, str):
             reason = RejectReason(reason).get_long()
         self.apduAbortRejectReason = reason
-
         # use the context to fill in most of the fields
         if context is not None:
             self.set_context(context)
+
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        pdu.put(apci.apduType << 4)
+        pdu.put(apci.apduInvokeID)
+        pdu.put(apci.apduAbortRejectReason)
+
+    @staticmethod
+    def decode_pdu(apci, pdu, buff):
+        apci.apduInvokeID = pdu.get()
+        apci.apduAbortRejectReason = pdu.get()
 
 
 register_apdu_type(RejectPDU)
@@ -606,10 +466,30 @@ class AbortPDU(_APDU):
         if isinstance(reason, str):
             reason = AbortReason(reason).get_long()
         self.apduAbortRejectReason = reason
-
         # use the context to fill in most of the fields
         if context is not None:
             self.set_context(context)
+
+    @staticmethod
+    def encode_pdu(apci, pdu):
+        # PDU type
+        buff = apci.apduType << 4
+        if apci.apduSrv:
+            buff += 0x01
+        pdu.put(buff)
+        pdu.put(apci.apduInvokeID)
+        pdu.put(apci.apduAbortRejectReason)
+
+    @staticmethod
+    def decode_pdu(apci, pdu, buff):
+        apci.apduSrv = ((buff & 0x01) != 0)
+        apci.apduInvokeID = pdu.get()
+        apci.apduAbortRejectReason = pdu.get()
+        apci.pduData = pdu.pduData
+
+    @staticmethod
+    def get_service_name(apdu_servive: int):
+        return f'?(apdu_servive {apdu_servive})'
 
     def __str__(self):
         try:

@@ -72,7 +72,7 @@ class IOController(object):
         to other types of applications that the IOCB is being processed.
         :param iocb: the IOCB being processed
         """
-        _logger.debug('active_io {iocb!r}')
+        _logger.debug(f'active_io {iocb!r}')
         # requests should be idle or pending before coming active
         if (iocb.io_state != IDLE) and (iocb.io_state != PENDING):
             raise RuntimeError("invalid state transition (currently %d)" % (iocb.io_state,))
