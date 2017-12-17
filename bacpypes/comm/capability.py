@@ -22,7 +22,7 @@ class Collector(object):
     """
 
     def __init__(self):
-        # gather the capbilities
+        # gather the capabilities
         self.capabilities = self._search_capability(self.__class__)
         # give them a chance to init
         for cls in self.capabilities:
@@ -65,7 +65,7 @@ class Collector(object):
         # save this additional class
         self.capabilities.append(cls)
         # morph into a new type
-        newtype = type(self.__class__.__name__ + '+' + cls.__name__, bases, {})
+        newtype = type(f'{self.__class__.__name__}+{cls.__name__}', bases, {})
         self.__class__ = newtype
         # allow the new type to init
         if hasattr(cls, '__init__'):

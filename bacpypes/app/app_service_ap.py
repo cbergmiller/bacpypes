@@ -34,23 +34,14 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             try:
                 xpdu = atype()
                 xpdu.decode(apdu)
-            except RejectException as err:
-                # decoding reject
+            except (RejectException, AbortException) as err:
                 error_found = err
-            except AbortException as err:
-                # decoding abort
-                error_found = err
-            # no error so far, keep going
-            if not error_found:
-                # no decoding error
+            else:
+                # no error so far, keep going
                 try:
                     # forward the decoded packet
                     self.sap_request(xpdu)
-                except RejectException as err:
-                    # execution reject
-                    error_found = err
-                except AbortException as err:
-                    # execution abort
+                except (RejectException, AbortException) as err:
                     error_found = err
             # if there was an error, send it back to the client
             if isinstance(error_found, RejectException):
@@ -73,20 +64,12 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             try:
                 xpdu = atype()
                 xpdu.decode(apdu)
-            except RejectException:
-                # decoding reject
-                return
-            except AbortException:
-                # decoding abort
+            except (RejectException, AbortException):
                 return
             try:
                 # forward the decoded packet
                 self.sap_request(xpdu)
-            except RejectException:
-                # execution reject
-                pass
-            except AbortException:
-                # execution abort
+            except (RejectException, AbortException):
                 pass
         else:
             # unknown PDU type?!
@@ -131,7 +114,7 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
             try:
                 xpdu = atype()
                 xpdu.decode(apdu)
-            except Exception as err:
+            except Exception:
                 # unconfirmed request decoding error
                 return
         elif isinstance(apdu, ErrorPDU):

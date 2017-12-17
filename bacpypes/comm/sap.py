@@ -18,7 +18,7 @@ class ServiceAccessPoint:
     at the same time.
     """
     def __init__(self, sapID=None):
-        if DEBUG: _logger.debug("__init__(%s)", sapID)
+        if DEBUG: _logger.debug('__init__(%s)', sapID)
         self.serviceID = sapID
         self.serviceElement = None
         if sapID is not None:
@@ -33,7 +33,7 @@ class ServiceAccessPoint:
                 bind(element, self)
 
     def sap_request(self, *args, **kwargs):
-        if DEBUG: _logger.debug("sap_request(%s) %r %r", self.serviceID, args, kwargs)
+        if DEBUG: _logger.debug('sap_request(%s) %r %r', self.serviceID, args, kwargs)
         if not self.serviceElement:
             raise ConfigurationError('unbound service access point')
         self.serviceElement.indication(*args, **kwargs)
@@ -42,7 +42,7 @@ class ServiceAccessPoint:
         raise NotImplementedError('sap_indication must be overridden')
 
     def sap_response(self, *args, **kwargs):
-        if DEBUG: _logger.debug("sap_response(%s) %r %r", self.serviceID, args, kwargs)
+        if DEBUG: _logger.debug('sap_response(%s) %r %r', self.serviceID, args, kwargs)
         if not self.serviceElement:
             raise ConfigurationError('unbound service access point')
         self.serviceElement.confirmation(*args, **kwargs)

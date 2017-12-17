@@ -18,7 +18,7 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
 
     def __init__(self, addr=None, ttl=None, sapID=None, cid=None, sid=None):
         """A BIP node."""
-        if DEBUG: _logger.debug("__init__ addr=%r ttl=%r sapID=%r cid=%r sid=%r", addr, ttl, sapID, cid, sid)
+        if DEBUG: _logger.debug('__init__ addr=%r ttl=%r sapID=%r cid=%r sid=%r', addr, ttl, sapID, cid, sid)
         BIPSAP.__init__(self, sapID)
         Client.__init__(self, cid)
         Server.__init__(self, sid)
@@ -31,14 +31,14 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
         if addr:
             # a little error checking
             if ttl is None:
-                raise RuntimeError("BBMD address and time-to-live must both be specified")
+                raise RuntimeError('BBMD address and time-to-live must both be specified')
             self.register(addr, ttl)
 
     def indication(self, pdu):
-        if DEBUG: _logger.debug("indication %r", pdu)
+        if DEBUG: _logger.debug('indication %r', pdu)
         # check the BBMD registration status, we may not be registered
         if self.registrationStatus != 0:
-            if DEBUG: _logger.debug("    - packet dropped, unregistered")
+            if DEBUG: _logger.debug('    - packet dropped, unregistered')
             return
         # check for local stations
         if pdu.pduDestination.addrType == Address.localStationAddr:
@@ -55,10 +55,10 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             # send it downstream
             self.request(xpdu)
         else:
-            _logger.warning("invalid destination address: %r", pdu.pduDestination)
+            _logger.warning('invalid destination address: %r', pdu.pduDestination)
 
     def confirmation(self, pdu):
-        if DEBUG: _logger.debug("confirmation %r", pdu)
+        if DEBUG: _logger.debug('confirmation %r', pdu)
         # check for a registration request result
         if isinstance(pdu, Result):
             # if we are unbinding, do nothing
@@ -67,7 +67,7 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             ### make sure we have a bind request in process
             # make sure the result is from the bbmd
             if pdu.pduSource != self.bbmdAddress:
-                if DEBUG: _logger.debug("    - packet dropped, not from the BBMD")
+                if DEBUG: _logger.debug('    - packet dropped, not from the BBMD')
                 return
             # save the result code as the status
             self.registrationStatus = pdu.bvlciResultCode
@@ -78,7 +78,7 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             return
         # check the BBMD registration status, we may not be registered
         if self.registrationStatus != 0:
-            if DEBUG: _logger.debug("    - packet dropped, unregistered")
+            if DEBUG: _logger.debug('    - packet dropped, unregistered')
             return
         if isinstance(pdu, ReadBroadcastDistributionTableAck):
             # send this to the service access point
@@ -97,13 +97,13 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             # send it upstream
             self.response(xpdu)
         else:
-            _logger.warning("invalid pdu type: %s", type(pdu))
+            _logger.warning('invalid pdu type: %s', type(pdu))
 
     def register(self, addr, ttl):
         """Initiate the process of registering with a BBMD."""
         # a little error checking
         if ttl <= 0:
-            raise ValueError("time-to-live must be greater than zero")
+            raise ValueError('time-to-live must be greater than zero')
         # save the BBMD address and time-to-live
         if isinstance(addr, Address):
             self.bbmdAddress = addr

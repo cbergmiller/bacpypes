@@ -52,26 +52,23 @@ class NetworkAdapter(Client, DebugContents):
     _debug_contents = ('adapterSAP-', 'adapterNet')
 
     def __init__(self, sap, net, cid=None):
-        if DEBUG: _logger.debug("__init__ %r (net=%r) cid=%r", sap, net, cid)
+        if DEBUG: _logger.debug('__init__ %r (net=%r) cid=%r', sap, net, cid)
         Client.__init__(self, cid)
         self.adapterSAP = sap
         self.adapterNet = net
-
         # add this to the list of adapters for the network
         sap.adapters.append(self)
 
     def confirmation(self, pdu):
         """Decode upstream PDUs and pass them up to the service access point."""
-        if DEBUG: _logger.debug("confirmation %r (net=%r)", pdu, self.adapterNet)
-
+        if DEBUG: _logger.debug('confirmation %r (net=%r)', pdu, self.adapterNet)
         npdu = NPDU(user_data=pdu.pduUserData)
         npdu.decode(pdu)
         self.adapterSAP.process_npdu(self, npdu)
 
     def process_npdu(self, npdu):
         """Encode NPDUs from the service access point and send them downstream."""
-        if DEBUG: _logger.debug("process_npdu %r (net=%r)", npdu, self.adapterNet)
-
+        if DEBUG: _logger.debug('process_npdu %r (net=%r)', npdu, self.adapterNet)
         pdu = PDU(user_data=npdu.pduUserData)
         npdu.encode(pdu)
         self.request(pdu)

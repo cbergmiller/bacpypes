@@ -4,6 +4,7 @@
 Change Of Value Service
 """
 import time
+import logging
 from ..debugging import bacpypes_debugging, DebugContents, ModuleLogger
 from ..comm import Capability, IOCB
 from ..task import call_later
@@ -18,63 +19,43 @@ from ..errors import ExecutionError
 from ..object import Property
 from .detect import DetectionAlgorithm, monitor_filter
 
-# some debugging
-_debug = 0
-_log = ModuleLogger(globals())
+_logger = logging.getLogger(__name__)
 
-#
-#   SubscriptionList
-#
-
-@bacpypes_debugging
 class SubscriptionList:
 
     def __init__(self):
-        if _debug: SubscriptionList._debug("__init__")
-
+        _logger.debug('__init__')
         self.cov_subscriptions = []
 
     def append(self, cov):
-        if _debug: SubscriptionList._debug("append %r", cov)
-
+        _logger.debug('append %r', cov)
         self.cov_subscriptions.append(cov)
 
     def remove(self, cov):
-        if _debug: SubscriptionList._debug("remove %r", cov)
-
+        _logger.debug('remove %r', cov)
         self.cov_subscriptions.remove(cov)
 
     def find(self, client_addr, proc_id, obj_id):
-        if _debug: SubscriptionList._debug("find %r %r %r", client_addr, proc_id, obj_id)
-
+        _logger.debug('find %r %r %r', client_addr, proc_id, obj_id)
         for cov in self.cov_subscriptions:
             all_equal = (cov.client_addr == client_addr) and \
                 (cov.proc_id == proc_id) and \
                 (cov.obj_id == obj_id)
-            if _debug: SubscriptionList._debug("    - cov, all_equal: %r %r", cov, all_equal)
-
+            _logger.debug('    - cov, all_equal: %r %r', cov, all_equal)
             if all_equal:
                 return cov
-
         return None
 
     def __len__(self):
-        if _debug: SubscriptionList._debug("__len__")
-
+        _logger.debug('__len__')
         return len(self.cov_subscriptions)
 
     def __iter__(self):
-        if _debug: SubscriptionList._debug("__iter__")
-
+        _logger.debug('__iter__')
         for cov in self.cov_subscriptions:
             yield cov
 
 
-#
-#   Subscription
-#
-
-@bacpypes_debugging
 class Subscription(DebugContents):
 
     _debug_contents = (
@@ -87,7 +68,7 @@ class Subscription(DebugContents):
         )
 
     def __init__(self, obj_ref, client_addr, proc_id, obj_id, confirmed, lifetime):
-        if _debug: Subscription._debug("__init__ %r %r %r %r %r %r", obj_ref, client_addr, proc_id, obj_id, confirmed, lifetime)
+        _logger.debug("__init__ %r %r %r %r %r %r", obj_ref, client_addr, proc_id, obj_id, confirmed, lifetime)
         # save the reference to the related object
         self.obj_ref = obj_ref
         # save the parameters
@@ -102,7 +83,7 @@ class Subscription(DebugContents):
             self.timeout_handle = call_later(self.lifetime, self.process_task)
 
     def cancel_subscription(self):
-        if _debug: Subscription._debug("cancel_subscription")
+        _logger.debug("cancel_subscription")
         # suspend the task
         self.suspend_task()
         # tell the application to cancel us
@@ -111,7 +92,7 @@ class Subscription(DebugContents):
         self.obj_ref = None
 
     def renew_subscription(self, lifetime):
-        if _debug: Subscription._debug("renew_subscription")
+        _logger.debug("renew_subscription")
         # suspend if scheduled
         if self.timeout_handle:
             self.timeout_handle.cancel()
@@ -120,15 +101,11 @@ class Subscription(DebugContents):
             self.timeout_handle = call_later(lifetime, self.process_task)
 
     def process_task(self):
-        if _debug: Subscription._debug("process_task")
+        _logger.debug("process_task")
         # subscription is canceled
         self.cancel_subscription()
 
-#
-#   COVDetection
-#
 
-@bacpypes_debugging
 class COVDetection(DetectionAlgorithm):
 
     properties_tracked = ()
@@ -136,7 +113,7 @@ class COVDetection(DetectionAlgorithm):
     monitored_property_reference = None
 
     def __init__(self, obj):
-        if _debug: COVDetection._debug("__init__ %r", obj)
+        _logger.debug("__init__ %r", obj)
         DetectionAlgorithm.__init__(self)
         # keep track of the object
         self.obj = obj
@@ -151,28 +128,28 @@ class COVDetection(DetectionAlgorithm):
         self.cov_subscriptions = SubscriptionList()
 
     def execute(self):
-        if _debug: COVDetection._debug("execute")
+        _logger.debug("execute")
         # something changed, send out the notifications
         self.send_cov_notifications()
 
     def send_cov_notifications(self):
-        if _debug: COVDetection._debug("send_cov_notifications")
+        _logger.debug("send_cov_notifications")
         # check for subscriptions
         if not len(self.cov_subscriptions):
             return
         # get the current time from the task manager
         current_time = time.time()
-        if _debug: COVDetection._debug("    - current_time: %r", current_time)
+        _logger.debug("    - current_time: %r", current_time)
         # create a list of values
         list_of_values = []
         for property_name in self.properties_reported:
-            if _debug: COVDetection._debug("    - property_name: %r", property_name)
+            _logger.debug("    - property_name: %r", property_name)
             # get the class
             property_datatype = self.obj.get_datatype(property_name)
-            if _debug: COVDetection._debug("        - property_datatype: %r", property_datatype)
+            _logger.debug("        - property_datatype: %r", property_datatype)
             # build the value
             bundle_value = property_datatype(self.obj._values[property_name])
-            if _debug: COVDetection._debug("        - bundle_value: %r", bundle_value)
+            _logger.debug("        - bundle_value: %r", bundle_value)
             # bundle it into a sequence
             property_value = PropertyValue(
                 propertyIdentifier=property_name,
@@ -180,10 +157,10 @@ class COVDetection(DetectionAlgorithm):
                 )
             # add it to the list
             list_of_values.append(property_value)
-        if _debug: COVDetection._debug("    - list_of_values: %r", list_of_values)
+        _logger.debug("    - list_of_values: %r", list_of_values)
         # loop through the subscriptions and send out notifications
         for cov in self.cov_subscriptions:
-            if _debug: COVDetection._debug("    - cov: %s", repr(cov))
+            _logger.debug("    - cov: %s", repr(cov))
             # calculate time remaining
             if not cov.lifetime:
                 time_remaining = 0
@@ -204,7 +181,7 @@ class COVDetection(DetectionAlgorithm):
             request.monitoredObjectIdentifier = cov.obj_id
             request.timeRemaining = time_remaining
             request.listOfValues = list_of_values
-            if _debug: COVDetection._debug("    - request: %s", repr(request))
+            _logger.debug("    - request: %s", repr(request))
             # let the application send it
             self.obj._app.cov_notification(cov, request)
 
@@ -225,7 +202,6 @@ class GenericCriteria(COVDetection):
     monitored_property_reference = 'presentValue'
 
 
-@bacpypes_debugging
 class COVIncrementCriteria(COVDetection):
 
     properties_tracked = (
@@ -240,26 +216,26 @@ class COVIncrementCriteria(COVDetection):
     monitored_property_reference = 'presentValue'
 
     def __init__(self, obj):
-        if _debug: COVIncrementCriteria._debug("__init__ %r", obj)
+        _logger.debug("__init__ %r", obj)
         COVDetection.__init__(self, obj)
         # previous reported value
         self.previous_reported_value = None
 
     @monitor_filter('presentValue')
     def present_value_filter(self, old_value, new_value):
-        if _debug: COVIncrementCriteria._debug("present_value_filter %r %r", old_value, new_value)
+        _logger.debug("present_value_filter %r %r", old_value, new_value)
         # first time around initialize to the old value
         if self.previous_reported_value is None:
-            if _debug: COVIncrementCriteria._debug("    - first value: %r", old_value)
+            _logger.debug("    - first value: %r", old_value)
             self.previous_reported_value = old_value
         # see if it changed enough to trigger reporting
         value_changed = (new_value <= (self.previous_reported_value - self.covIncrement)) \
             or (new_value >= (self.previous_reported_value + self.covIncrement))
-        if _debug: COVIncrementCriteria._debug("    - value significantly changed: %r", value_changed)
+        _logger.debug("    - value significantly changed: %r", value_changed)
         return value_changed
 
     def send_cov_notifications(self):
-        if _debug: COVIncrementCriteria._debug("send_cov_notifications")
+        _logger.debug("send_cov_notifications")
         # when sending out notifications, keep the current value
         self.previous_reported_value = self.presentValue
         # continue
@@ -373,11 +349,7 @@ criteria_type_map = {
     'pulseConverter': PulseConverterCriteria,
     }
 
-#
-#   ActiveCOVSubscriptions
-#
 
-@bacpypes_debugging
 class ActiveCOVSubscriptions(Property):
 
     def __init__(self):
@@ -387,10 +359,10 @@ class ActiveCOVSubscriptions(Property):
             )
 
     def ReadProperty(self, obj, arrayIndex=None):
-        if _debug: ActiveCOVSubscriptions._debug("ReadProperty %s arrayIndex=%r", obj, arrayIndex)
+        _logger.debug("ReadProperty %s arrayIndex=%r", obj, arrayIndex)
         # get the current time from the task manager
         current_time = time.time()
-        if _debug: ActiveCOVSubscriptions._debug("    - current_time: %r", current_time)
+        _logger.debug("    - current_time: %r", current_time)
         # start with an empty sequence
         cov_subscriptions = SequenceOf(COVSubscription)()
         # loop through the object and detection list
@@ -410,13 +382,13 @@ class ActiveCOVSubscriptions(Property):
                         macAddress=cov.client_addr.addrAddr,
                         ),
                     )
-                if _debug: ActiveCOVSubscriptions._debug("    - recipient: %r", recipient)
-                if _debug: ActiveCOVSubscriptions._debug("    - client MAC address: %r", cov.client_addr.addrAddr)
+                _logger.debug("    - recipient: %r", recipient)
+                _logger.debug("    - client MAC address: %r", cov.client_addr.addrAddr)
                 recipient_process = RecipientProcess(
                     recipient=recipient,
                     processIdentifier=cov.proc_id,
                     )
-                if _debug: ActiveCOVSubscriptions._debug("    - recipient_process: %r", recipient_process)
+                _logger.debug("    - recipient_process: %r", recipient_process)
                 cov_subscription = COVSubscription(
                     recipient=recipient_process,
                     monitoredPropertyReference=ObjectPropertyReference(
@@ -428,7 +400,7 @@ class ActiveCOVSubscriptions(Property):
                     )
                 if hasattr(cov_detection, 'covIncrement'):
                     cov_subscription.covIncrement = cov_detection.covIncrement
-                if _debug: ActiveCOVSubscriptions._debug("    - cov_subscription: %r", cov_subscription)
+                _logger.debug("    - cov_subscription: %r", cov_subscription)
                 # add the list
                 cov_subscriptions.append(cov_subscription)
         return cov_subscriptions
@@ -437,15 +409,10 @@ class ActiveCOVSubscriptions(Property):
         raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
 
 
-#
-#   ChangeOfValueServices
-#
-
-@bacpypes_debugging
 class ChangeOfValueServices(Capability):
 
     def __init__(self):
-        if _debug: ChangeOfValueServices._debug("__init__")
+        _logger.debug("__init__")
         Capability.__init__(self)
         # map from an object to its detection algorithm
         self.cov_detections = {}
@@ -455,33 +422,33 @@ class ChangeOfValueServices(Capability):
             self.localDevice.add_property(ActiveCOVSubscriptions())
 
     def add_subscription(self, cov):
-        if _debug: ChangeOfValueServices._debug("add_subscription %r", cov)
+        _logger.debug("add_subscription %r", cov)
         # add it to the subscription list for its object
         self.cov_detections[cov.obj_ref].cov_subscriptions.append(cov)
 
     def cancel_subscription(self, cov):
-        if _debug: ChangeOfValueServices._debug("cancel_subscription %r", cov)
+        _logger.debug("cancel_subscription %r", cov)
         # cancel the subscription timeout
         if cov.isScheduled:
             cov.suspend_task()
-            if _debug: ChangeOfValueServices._debug("    - task suspended")
+            _logger.debug("    - task suspended")
         # get the detection algorithm object
         cov_detection = self.cov_detections[cov.obj_ref]
         # remove it from the subscription list for its object
         cov_detection.cov_subscriptions.remove(cov)
         # if the detection algorithm doesn't have any subscriptions, remove it
         if not len(cov_detection.cov_subscriptions):
-            if _debug: ChangeOfValueServices._debug("    - no more subscriptions")
+            _logger.debug("    - no more subscriptions")
             # unbind all the hooks into the object
             cov_detection.unbind()
             # delete it from the object map
             del self.cov_detections[cov.obj_ref]
 
     def cov_notification(self, cov, request):
-        if _debug: ChangeOfValueServices._debug("cov_notification %s %s", str(cov), str(request))
+        _logger.debug("cov_notification %s %s", str(cov), str(request))
         # create an IOCB with the request
         iocb = IOCB(request)
-        if _debug: ChangeOfValueServices._debug("    - iocb: %r", iocb)
+        _logger.debug("    - iocb: %r", iocb)
         # add a callback for the response, even if it was unconfirmed
         iocb.cov = cov
         iocb.add_callback(self.cov_confirmation)
@@ -489,37 +456,37 @@ class ChangeOfValueServices(Capability):
         self.request_io(iocb)
 
     def cov_confirmation(self, iocb):
-        if _debug: ChangeOfValueServices._debug("cov_confirmation %r", iocb)
+        _logger.debug("cov_confirmation %r", iocb)
         # do something for success
         if iocb.io_response:
-            if _debug: ChangeOfValueServices._debug("    - ack")
+            _logger.debug("    - ack")
             self.cov_ack(iocb.cov, iocb.args[0], iocb.io_response)
         elif isinstance(iocb.io_error, Error):
-            if _debug: ChangeOfValueServices._debug("    - error: %r", iocb.io_error.errorCode)
+            _logger.debug("    - error: %r", iocb.io_error.errorCode)
             self.cov_error(iocb.cov, iocb.args[0], iocb.io_error)
         elif isinstance(iocb.io_error, RejectPDU):
-            if _debug: ChangeOfValueServices._debug("    - reject: %r", iocb.io_error.apduAbortRejectReason)
+            _logger.debug("    - reject: %r", iocb.io_error.apduAbortRejectReason)
             self.cov_reject(iocb.cov, iocb.args[0], iocb.io_error)
         elif isinstance(iocb.io_error, AbortPDU):
-            if _debug: ChangeOfValueServices._debug("    - abort: %r", iocb.io_error.apduAbortRejectReason)
+            _logger.debug("    - abort: %r", iocb.io_error.apduAbortRejectReason)
             self.cov_abort(iocb.cov, iocb.args[0], iocb.io_error)
 
     def cov_ack(self, cov, request, response):
-        if _debug: ChangeOfValueServices._debug("cov_ack %r %r %r", cov, request, response)
+        _logger.debug("cov_ack %r %r %r", cov, request, response)
 
     def cov_error(self, cov, request, response):
-        if _debug: ChangeOfValueServices._debug("cov_error %r %r %r", cov, request, response)
+        _logger.debug("cov_error %r %r %r", cov, request, response)
 
     def cov_reject(self, cov, request, response):
-        if _debug: ChangeOfValueServices._debug("cov_reject %r %r %r", cov, request, response)
+        _logger.debug("cov_reject %r %r %r", cov, request, response)
 
     def cov_abort(self, cov, request, response):
-        if _debug: ChangeOfValueServices._debug("cov_abort %r %r %r", cov, request, response)
+        _logger.debug("cov_abort %r %r %r", cov, request, response)
 
         ### delete the rest of the pending requests for this client
 
     def do_SubscribeCOVRequest(self, apdu):
-        if _debug: ChangeOfValueServices._debug("do_SubscribeCOVRequest %r", apdu)
+        _logger.debug("do_SubscribeCOVRequest %r", apdu)
         # extract the pieces
         client_addr = apdu.pduSource
         proc_id = apdu.subscriberProcessIdentifier
@@ -530,7 +497,7 @@ class ChangeOfValueServices(Capability):
         cancel_subscription = (confirmed is None) and (lifetime is None)
         # find the object
         obj = self.get_object_id(obj_id)
-        if _debug: ChangeOfValueServices._debug("    - object: %r", obj)
+        _logger.debug("    - object: %r", obj)
         if not obj:
             raise ExecutionError(errorClass='object', errorCode='unknownObject')
         # look for an algorithm already associated with this object
@@ -545,26 +512,26 @@ class ChangeOfValueServices(Capability):
             cov_detection = criteria_class(obj)
             # keep track of it for other subscriptions
             self.cov_detections[obj] = cov_detection
-        if _debug: ChangeOfValueServices._debug("    - cov_detection: %r", cov_detection)
+        _logger.debug("    - cov_detection: %r", cov_detection)
         # can a match be found?
         cov = cov_detection.cov_subscriptions.find(client_addr, proc_id, obj_id)
-        if _debug: ChangeOfValueServices._debug("    - cov: %r", cov)
+        _logger.debug("    - cov: %r", cov)
         # if a match was found, update the subscription
         if cov:
             if cancel_subscription:
-                if _debug: ChangeOfValueServices._debug("    - cancel the subscription")
+                _logger.debug("    - cancel the subscription")
                 self.cancel_subscription(cov)
             else:
-                if _debug: ChangeOfValueServices._debug("    - renew the subscription")
+                _logger.debug("    - renew the subscription")
                 cov.renew_subscription(lifetime)
         else:
             if cancel_subscription:
-                if _debug: ChangeOfValueServices._debug("    - cancel a subscription that doesn't exist")
+                _logger.debug("    - cancel a subscription that doesn't exist")
             else:
-                if _debug: ChangeOfValueServices._debug("    - create a subscription")
+                _logger.debug("    - create a subscription")
                 # make a subscription
                 cov = Subscription(obj, client_addr, proc_id, obj_id, confirmed, lifetime)
-                if _debug: ChangeOfValueServices._debug("    - cov: %r", cov)
+                _logger.debug("    - cov: %r", cov)
                 # add it to our subscriptions lists
                 self.add_subscription(cov)
         # success

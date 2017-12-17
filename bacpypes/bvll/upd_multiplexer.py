@@ -1,4 +1,3 @@
-
 import sys
 import asyncio
 import logging
@@ -37,8 +36,9 @@ class UDPMultiplexer:
     """
     UDPMultiplexer
     """
+
     def __init__(self, addr=None, noBroadcast=False):
-        if DEBUG: _logger.debug("__init__ %r noBroadcast=%r", addr, noBroadcast)
+        if DEBUG: _logger.debug('__init__ %r noBroadcast=%r', addr, noBroadcast)
         # check for some options
         special_broadcast = False
         if addr is None:
@@ -63,9 +63,9 @@ class UDPMultiplexer:
             else:
                 special_broadcast = True
         if DEBUG:
-            _logger.debug("    - address: %r", self.address)
-            _logger.debug("    - addrTuple: %r", self.addrTuple)
-            _logger.debug("    - addrBroadcastTuple: %r", self.addrBroadcastTuple)
+            _logger.debug('    - address: %r', self.address)
+            _logger.debug('    - addrTuple: %r', self.addrTuple)
+            _logger.debug('    - addrBroadcastTuple: %r', self.addrBroadcastTuple)
         # create and bind the direct address
         self.direct = _MultiplexClient(self)
         loop = asyncio.get_event_loop()
@@ -76,8 +76,11 @@ class UDPMultiplexer:
         # create and bind the broadcast address for non-Windows
         if special_broadcast and (not noBroadcast) and sys.platform in ('linux', 'darwin'):
             self.broadcast = _MultiplexClient(self)
-            listen = loop.create_datagram_endpoint(UDPDirector, remote_addr=self.addrBroadcastTuple,
-                                                                reuse_address=True)
+            listen = loop.create_datagram_endpoint(
+                UDPDirector,
+                remote_addr=self.addrBroadcastTuple,
+                reuse_address=True
+            )
             transport, protocol = loop.run_until_complete(listen)
             self.broadcastProtocol = protocol
             bind(self.direct, self.broadcastProtocol)
@@ -89,33 +92,33 @@ class UDPMultiplexer:
         self.annexJ = _MultiplexServer(self)
 
     def close_socket(self):
-        if DEBUG: _logger.debug("close_socket")
+        if DEBUG: _logger.debug('close_socket')
         # pass along the close to the director(s)
         self.protocol.close_socket()
         if self.broadcastProtocol:
             self.broadcastProtocol.close_socket()
 
     def indication(self, server, pdu):
-        if DEBUG: _logger.debug("indication %r %r", server, pdu)
+        if DEBUG: _logger.debug('indication %r %r', server, pdu)
         # check for a broadcast message
         if pdu.pduDestination.addrType == Address.localBroadcastAddr:
             dest = self.addrBroadcastTuple
-            if DEBUG: _logger.debug("    - requesting local broadcast: %r", dest)
+            if DEBUG: _logger.debug('    - requesting local broadcast: %r', dest)
             # interface might not support broadcasts
             if not dest:
                 return
         elif pdu.pduDestination.addrType == Address.localStationAddr:
             dest = unpack_ip_addr(pdu.pduDestination.addrAddr)
-            if DEBUG: _logger.debug("    - requesting local station: %r", dest)
+            if DEBUG: _logger.debug('    - requesting local station: %r', dest)
         else:
-            raise RuntimeError("invalid destination address type")
+            raise RuntimeError('invalid destination address type')
         self.protocol.indication(PDU(pdu, destination=dest))
 
     def confirmation(self, client, pdu):
-        if DEBUG: _logger.debug("confirmation %r %r", client, pdu)
+        if DEBUG: _logger.debug('confirmation %r %r', client, pdu)
         # if this came from ourselves, dump it
         if pdu.pduSource == self.addrTuple:
-            if DEBUG: _logger.debug("    - from us!")
+            if DEBUG: _logger.debug('    - from us!')
             return
         # the PDU source is a tuple, convert it to an Address instance
         src = Address(pdu.pduSource)
@@ -125,10 +128,10 @@ class UDPMultiplexer:
         elif client is self.broadcast:
             dest = LocalBroadcast()
         else:
-            raise RuntimeError("confirmation mismatch")
+            raise RuntimeError('confirmation mismatch')
         # must have at least one octet
         if not pdu.pduData:
-            if DEBUG: _logger.debug("    - no data")
+            if DEBUG: _logger.debug('    - no data')
             return
         # extract the first octet
         msg_type = pdu.pduData[0]
@@ -140,4 +143,4 @@ class UDPMultiplexer:
             if self.annexJ.serverPeer:
                 self.annexJ.response(PDU(pdu, source=src, destination=dest))
         else:
-            UDPMultiplexer._warning("unsupported message")
+            _logger.warning('unsupported message')

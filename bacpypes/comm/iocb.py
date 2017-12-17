@@ -84,7 +84,7 @@ class IOCB(DebugContents):
             io_id = _ident_next
             _ident_next += 1
         # debugging postponed until ID acquired
-        _logger.debug(f'__init__({io_id}) {args!r} {kwargs!r}')
+        _logger.debug('__init__(%d) %r %r', io_id, args, kwargs)
         # save the ID
         self.io_id = io_id
         # save the request parameters
@@ -105,7 +105,7 @@ class IOCB(DebugContents):
         # extract the priority if it was given
         if '_priority' in kwargs:
             self.io_priority = kwargs.pop('_priority')
-            _logger.debug(f'    - io priority: {self.io_priority!r}')
+            _logger.debug('    - io priority: %s', self.io_priority)
         # request has no timeout
         self.io_timeout = None
 
@@ -122,7 +122,7 @@ class IOCB(DebugContents):
         will be called immediately.  Callback functions are typically added
         to an IOCB before it is given to a controller.
         """
-        _logger.debug(f'add_callback({self.io_id}) {fn!r} {args!r} {kwargs!r}')
+        _logger.debug('add_callback(%d) %r %r %r', self.io_id, fn, args, kwargs)
         # store it
         self.io_callback.append((fn, args, kwargs))
         # already complete?
@@ -135,7 +135,7 @@ class IOCB(DebugContents):
         result has been placed in the ICOB.  The arguments are passed to the
         `wait()` function of the ioComplete event.
         """
-        _logger.debug(f'wait({self.io_id}) {args!r}')
+        _logger.debug('wait(%d) %r', self.io_id, args)
         # waiting from a non-daemon thread could be trouble
         self.io_complete.wait(*args)
 
@@ -144,7 +144,7 @@ class IOCB(DebugContents):
         This method is called by complete() or abort() after the positive or
         negative result has been stored in the IOCB.
         """
-        _logger.debug(f'trigger({self.io_id})')
+        _logger.debug('trigger(%d)', self.io_id)
         # Set the completion event and make the callback(s).
         # if there's a timer, cancel it
         if self.io_timeout:
@@ -155,7 +155,7 @@ class IOCB(DebugContents):
         _logger.debug('    - complete event set')
         # make the callback(s)
         for fn, args, kwargs in self.io_callback:
-            _logger.debug(f'    - callback fn: {fn!r} {args!r} {kwargs!r}')
+            _logger.debug('    - callback fn: %r %r %r', fn, args, kwargs)
             fn(self, *args, **kwargs)
 
     def complete(self, msg):
@@ -163,7 +163,7 @@ class IOCB(DebugContents):
         Called to complete a transaction, usually when ProcessIO has
         shipped the IOCB off to some other thread or function.
         """
-        _logger.debug(f'complete({self.io_id}) {msg!r}')
+        _logger.debug('complete(%d) %r', self.io_id, msg)
         if self.io_controller:
             # pass to controller
             self.io_controller.complete_io(self, msg)
@@ -178,7 +178,7 @@ class IOCB(DebugContents):
         Called by a client to abort a transaction.
         :param msg: negative results of request
         """
-        _logger.debug(f'abort({self.io_id}) {err!r}')
+        _logger.debug('abort(%d) %r', self.io_id, err)
         if self.io_controller:
             # pass to controller
             self.io_controller.abort_io(self, err)
@@ -195,7 +195,7 @@ class IOCB(DebugContents):
         :param seconds delay: the time limit for processing the IOCB
         :param err: the error to use when the IOCB is aborted
         """
-        _logger.debug(f'set_timeout({self.io_id}) {delay} err={err!r}')
+        _logger.debug('set_timeout(%d) %s err=%r', self.io_id, delay, err)
         # if one has already been created, cancel it
         if self.io_timeout:
             self.io_timeout.cancel()

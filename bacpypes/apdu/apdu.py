@@ -164,7 +164,7 @@ class ConfirmedRequestPDU(_APDU):
         pdu.put(apci.apduService)
 
     @staticmethod
-    def decode(apci, pdu, buff):
+    def decode_pdu(apci, pdu, buff):
         apci.apduSeg = ((buff & 0x08) != 0)
         apci.apduMor = ((buff & 0x04) != 0)
         apci.apduSA = ((buff & 0x02) != 0)
@@ -199,7 +199,7 @@ class UnconfirmedRequestPDU(_APDU):
         pdu.put(apci.apduService)
 
     @staticmethod
-    def decode(apci, pdu, buff):
+    def decode_pdu(apci, pdu, buff):
         apci.apduService = pdu.get()
         apci.pduData = pdu.pduData
 
@@ -592,7 +592,7 @@ class Error(ErrorSequence):
     sequenceElements = ErrorType.sequenceElements
 
     def __str__(self):
-        return f'{self.errorClass}: {self.errorCode}' + str()
+        return f'{self.errorClass}: {self.errorCode}'
 
 
 error_types[12] = Error

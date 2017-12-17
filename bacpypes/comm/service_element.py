@@ -14,7 +14,7 @@ class ApplicationServiceElement:
     ApplicationServiceElement
     """
     def __init__(self, aseID=None):
-        if DEBUG: _logger.debug("__init__(%s)", aseID)
+        if DEBUG: _logger.debug('__init__(%s)', aseID)
 
         self.elementID = aseID
         self.elementService = None
@@ -30,7 +30,7 @@ class ApplicationServiceElement:
                 bind(self, service)
 
     def request(self, *args, **kwargs):
-        if DEBUG: _logger.debug("request(%s) %r %r", self.elementID, args, kwargs)
+        if DEBUG: _logger.debug('request(%s) %r %r', self.elementID, args, kwargs)
         if not self.elementService:
             raise ConfigurationError('unbound application service element')
         self.elementService.sap_indication(*args, **kwargs)
@@ -39,7 +39,7 @@ class ApplicationServiceElement:
         raise NotImplementedError('indication must be overridden')
 
     def response(self, *args, **kwargs):
-        if DEBUG: _logger.debug("response(%s) %r %r", self.elementID, args, kwargs)
+        if DEBUG: _logger.debug('response(%s) %r %r', self.elementID, args, kwargs)
         if not self.elementService:
             raise ConfigurationError('unbound application service element')
         self.elementService.sap_confirmation(*args, **kwargs)

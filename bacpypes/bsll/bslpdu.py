@@ -1,114 +1,14 @@
-#!/usr/bin/python
+from ..link import LocalStation
+from ..comm import PDUData
+from .bslci import BSLCI
+from .registry import register_bslpdu_type
 
-"""
-BACnet Streaming Link Layer Module
-"""
-
-import hashlib
-import logging
-from .errors import EncodingError, DecodingError
-from .debugging import DebugContents
-
-from .comm import PDUData
-from .link import LocalStation, PCI
-
-_logger = logging.getLogger(__name__)
-
-# a dictionary of message type values and classes
-bsl_pdu_types = {}
-
-
-def register_bslpdu_type(cls):
-    bsl_pdu_types[cls.messageType] = cls
-
-
-# Service Identifiers
-DEVICE_TO_DEVICE_SERVICE_ID = 0x01
-ROUTER_TO_ROUTER_SERVICE_ID = 0x02
-PROXY_SERVICE_ID = 0x03
-LANE_SERVICE_ID = 0x04
-CLIENT_SERVER_SERVICE_ID = 0x05
-
-# Hash Functions
-_md5 = lambda x: hashlib.md5(x).digest()
-_sha1 = lambda x: hashlib.sha1(x).digest()
-_sha224 = lambda x: hashlib.sha224(x).digest()
-_sha256 = lambda x: hashlib.sha256(x).digest()
-_sha384 = lambda x: hashlib.sha384(x).digest()
-_sha512 = lambda x: hashlib.sha512(x).digest()
-
-hash_functions = (_md5, _sha1, _sha224, _sha256, _sha384, _sha512)
-
-# Result Codes
-SUCCESS = 0
-NO_DEVICE_TO_DEVICE_SERVICE = 1
-NO_ROUTER_TO_ROUTER_SERVICE = 2
-NO_PROXY_SERVICE = 3
-NO_LANE_SERVICE = 4
-UNRECOGNIZED_SERVICE = 5
-AUTHENTICATION_REQUIRED = 10  # authentication required
-AUTHENTICATION_FAILURE = 11  # username and/or username/password failure
-AUTHENTICATION_NO_SERVICE = 12  #
-AUTHENTICATION_HASH = 13  # specified hash function not supported
-
-
-class BSLCI(PCI, DebugContents):
-    """
-    BSLCI
-    """
-    result = 0x00
-    serviceRequest = 0x01
-    accessRequest = 0x02
-    accessChallenge = 0x03
-    accessResponse = 0x04
-    deviceToDeviceAPDU = 0x05
-    routerToRouterNPDU = 0x06
-    proxyToServerUnicastNPDU = 0x07
-    proxyToServerBroadcastNPDU = 0x08
-    serverToProxyUnicastNPDU = 0x09
-    serverToProxyBroadcastNPDU = 0x0A
-    clientToLESUnicastNPDU = 0x0B
-    clientToLESBroadcastNPDU = 0x0C
-    lesToClientUnicastNPDU = 0x0D
-    lesToClientBroadcastNPDU = 0x0E
-    clientToServerUnicastAPDU = 0x0F
-    clientToServerBroadcastAPDU = 0x10
-    serverToClientUnicastAPDU = 0x11
-    serverToClientBroadcastAPDU = 0x12
-
-    def __init__(self, *args, **kwargs):
-        super(BSLCI, self).__init__(*args, **kwargs)
-        self.bslciType = 0x83
-        self.bslciFunction = None
-        self.bslciLength = None
-
-    def update(self, bslci):
-        PCI.update(self, bslci)
-        self.bslciType = bslci.bslciType
-        self.bslciFunction = bslci.bslciFunction
-        self.bslciLength = bslci.bslciLength
-
-    def encode(self, pdu):
-        """encode the contents of the BSLCI into the PDU."""
-        # copy the basics
-        PCI.update(pdu, self)
-        pdu.put(self.bslciType)  # 0x83
-        pdu.put(self.bslciFunction)
-        if self.bslciLength != len(self.pduData) + 4:
-            raise EncodingError('invalid BSLCI length')
-        pdu.put_short(self.bslciLength)
-
-    def decode(self, pdu):
-        """decode the contents of the PDU into the BSLCI."""
-        # copy the basics
-        PCI.update(self, pdu)
-        self.bslciType = pdu.get()
-        if self.bslciType != 0x83:
-            raise DecodingError('invalid BSLCI type')
-        self.bslciFunction = pdu.get()
-        self.bslciLength = pdu.get_short()
-        if (self.bslciLength != len(pdu.pduData) + 4):
-            raise DecodingError('invalid BSLCI length')
+__all__ = [
+    'BSLPDU', 'DeviceToDeviceAPDU', 'RouterToRouterNPDU', 'ProxyToServerBroadcastNPDU', 'ProxyToServerUnicastNPDU',
+    'ServerToClientBroadcastAPDU', 'ServerToClientUnicastAPDU', 'ServerToProxyUnicastNPDU',
+    'ServerToProxyBroadcastNPDU', 'ClientToLESBroadcastNPDU', 'ClientToLESUnicastNPDU', 'ClientToServerBroadcastAPDU',
+    'ClientToServerUnicastAPDU', 'LESToClientBroadcastNPDU', 'LESToClientUnicastNPDU'
+]
 
 
 class BSLPDU(BSLCI, PDUData):
@@ -128,146 +28,7 @@ class BSLPDU(BSLCI, PDUData):
         self.pduData = pdu.get_data(len(pdu.pduData))
 
 
-class Result(BSLCI):
-    """
-    Result
-    """
-
-    messageType = BSLCI.result
-
-    def __init__(self, code=None, *args, **kwargs):
-        super(Result, self).__init__(*args, **kwargs)
-        self.bslciFunction = BSLCI.result
-        self.bslciLength = 6
-        self.bslciResultCode = code
-
-    def encode(self, bslpdu):
-        BSLCI.update(bslpdu, self)
-        bslpdu.put_short(self.bslciResultCode)
-
-    def decode(self, bslpdu):
-        BSLCI.update(self, bslpdu)
-        self.bslciResultCode = bslpdu.get_short()
-
-
-register_bslpdu_type(Result)
-
-
-
-class ServiceRequest(BSLCI):
-    """
-    ServiceRequest
-    """
-    messageType = BSLCI.serviceRequest
-
-    def __init__(self, code=None, *args, **kwargs):
-        super(ServiceRequest, self).__init__(*args, **kwargs)
-        self.bslciFunction = BSLCI.serviceRequest
-        self.bslciLength = 6
-        self.bslciServiceID = code
-
-    def encode(self, bslpdu):
-        BSLCI.update(bslpdu, self)
-        bslpdu.put_short(self.bslciServiceID)
-
-    def decode(self, bslpdu):
-        BSLCI.update(self, bslpdu)
-        self.bslciServiceID = bslpdu.get_short()
-
-
-register_bslpdu_type(ServiceRequest)
-
-
-class AccessRequest(BSLCI):
-    """
-    AccessRequest
-    """
-
-    messageType = BSLCI.accessRequest
-
-    def __init__(self, hashFn=0, username='', *args, **kwargs):
-        super(AccessRequest, self).__init__(*args, **kwargs)
-
-        self.bslciFunction = BSLCI.accessRequest
-        self.bslciLength = 5
-        self.bslciHashFn = hashFn
-        self.bslciUsername = username
-        if username:
-            self.bslciLength += len(username)
-
-    def encode(self, bslpdu):
-        BSLCI.update(bslpdu, self)
-        bslpdu.put(self.bslciHashFn)
-        bslpdu.put_data(self.bslciUsername)
-
-    def decode(self, bslpdu):
-        BSLCI.update(self, bslpdu)
-        self.bslciHashFn = bslpdu.get()
-        self.bslciUsername = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(AccessRequest)
-
-
-class AccessChallenge(BSLCI):
-    """
-    AccessChallenge
-    """
-
-    messageType = BSLCI.accessChallenge
-
-    def __init__(self, hashFn=0, challenge='', *args, **kwargs):
-        super(AccessChallenge, self).__init__(*args, **kwargs)
-        self.bslciFunction = BSLCI.accessChallenge
-        self.bslciLength = 5
-        self.bslciHashFn = hashFn
-        self.bslciChallenge = challenge
-        if challenge:
-            self.bslciLength += len(challenge)
-
-    def encode(self, bslpdu):
-        BSLCI.update(bslpdu, self)
-        bslpdu.put(self.bslciHashFn)
-        bslpdu.put_data(self.bslciChallenge)
-
-    def decode(self, bslpdu):
-        BSLCI.update(self, bslpdu)
-        self.bslciHashFn = bslpdu.get()
-        self.bslciChallenge = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(AccessChallenge)
-
-
-class AccessResponse(BSLCI):
-    """
-    AccessResponse
-    """
-    messageType = BSLCI.accessResponse
-
-    def __init__(self, hashFn=0, response='', *args, **kwargs):
-        super(AccessResponse, self).__init__(*args, **kwargs)
-        self.bslciFunction = BSLCI.accessResponse
-        self.bslciLength = 5
-        self.bslciHashFn = hashFn
-        self.bslciResponse = response
-        if response:
-            self.bslciLength += len(response)
-
-    def encode(self, bslpdu):
-        BSLCI.update(bslpdu, self)
-        bslpdu.put(self.bslciHashFn)
-        bslpdu.put_data(self.bslciResponse)
-
-    def decode(self, bslpdu):
-        BSLCI.update(self, bslpdu)
-        self.bslciHashFn = bslpdu.get()
-        self.bslciResponse = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(AccessResponse)
-
-
+@register_bslpdu_type
 class DeviceToDeviceAPDU(BSLPDU):
     """
     DeviceToDeviceAPDU
@@ -292,9 +53,7 @@ class DeviceToDeviceAPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(DeviceToDeviceAPDU)
-
-
+@register_bslpdu_type
 class RouterToRouterNPDU(BSLPDU):
     """
     RouterToRouterNPDU
@@ -303,14 +62,12 @@ class RouterToRouterNPDU(BSLPDU):
 
     def __init__(self, *args, **kwargs):
         super(RouterToRouterNPDU, self).__init__(*args, **kwargs)
-
         self.bslciFunction = BSLCI.routerToRouterNPDU
         self.bslciLength = 4 + len(self.pduData)
 
     def encode(self, bslpdu):
         # make sure the length is correct
         self.bslciLength = 4 + len(self.pduData)
-
         BSLCI.update(bslpdu, self)
 
         # encode the rest of the data
@@ -318,14 +75,11 @@ class RouterToRouterNPDU(BSLPDU):
 
     def decode(self, bslpdu):
         BSLCI.update(self, bslpdu)
-
         # get the rest of the data
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(RouterToRouterNPDU)
-
-
+@register_bslpdu_type
 class ProxyToServerUnicastNPDU(BSLPDU):
     """
     ProxyToServerUnicastNPDU
@@ -358,9 +112,6 @@ class ProxyToServerUnicastNPDU(BSLPDU):
         self.bslciAddress = LocalStation(bslpdu.get_data(addr_len))
         # get the rest of the data
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(ProxyToServerUnicastNPDU)
 
 
 class ProxyToServerBroadcastNPDU(BSLPDU):
@@ -397,9 +148,6 @@ class ProxyToServerBroadcastNPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(ProxyToServerBroadcastNPDU)
-
-
 class ServerToProxyUnicastNPDU(BSLPDU):
     """
     ServerToProxyUnicastNPDU
@@ -434,9 +182,6 @@ class ServerToProxyUnicastNPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(ServerToProxyUnicastNPDU)
-
-
 class ServerToProxyBroadcastNPDU(BSLPDU):
     """
     ServerToProxyBroadcastNPDU
@@ -459,9 +204,7 @@ class ServerToProxyBroadcastNPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(ServerToProxyBroadcastNPDU)
-
-
+@register_bslpdu_type
 class ClientToLESUnicastNPDU(BSLPDU):
     """
     ClientToLESUnicastNPDU
@@ -494,9 +237,6 @@ class ClientToLESUnicastNPDU(BSLPDU):
         self.bslciAddress = LocalStation(bslpdu.get_data(addr_len))
         # get the rest of the data
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(ClientToLESUnicastNPDU)
 
 
 class ClientToLESBroadcastNPDU(BSLPDU):
@@ -533,9 +273,7 @@ class ClientToLESBroadcastNPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(ClientToLESBroadcastNPDU)
-
-
+@register_bslpdu_type
 class LESToClientUnicastNPDU(BSLPDU):
     """
     LESToClientUnicastNPDU
@@ -568,9 +306,6 @@ class LESToClientUnicastNPDU(BSLPDU):
         self.bslciAddress = LocalStation(bslpdu.get_data(addr_len))
         # get the rest of the data
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(LESToClientUnicastNPDU)
 
 
 class LESToClientBroadcastNPDU(BSLPDU):
@@ -608,9 +343,6 @@ class LESToClientBroadcastNPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(LESToClientBroadcastNPDU)
-
-
 class ClientToServerUnicastAPDU(BSLPDU):
     """
     ClientToServerUnicastAPDU
@@ -645,9 +377,7 @@ class ClientToServerUnicastAPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(ClientToServerUnicastAPDU)
-
-
+@register_bslpdu_type
 class ClientToServerBroadcastAPDU(BSLPDU):
     """
     ClientToServerBroadcastAPDU
@@ -680,9 +410,6 @@ class ClientToServerBroadcastAPDU(BSLPDU):
         self.bslciAddress = LocalStation(bslpdu.get_data(addr_len))
         # get the rest of the data
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(ClientToServerBroadcastAPDU)
 
 
 class ServerToClientUnicastAPDU(BSLPDU):
@@ -719,9 +446,6 @@ class ServerToClientUnicastAPDU(BSLPDU):
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
 
 
-register_bslpdu_type(ServerToClientUnicastAPDU)
-
-
 class ServerToClientBroadcastAPDU(BSLPDU):
     """
     ServerToClientBroadcastAPDU
@@ -754,6 +478,3 @@ class ServerToClientBroadcastAPDU(BSLPDU):
         self.bslciAddress = LocalStation(bslpdu.get_data(addr_len))
         # get the rest of the data
         self.pduData = bslpdu.get_data(len(bslpdu.pduData))
-
-
-register_bslpdu_type(ServerToClientBroadcastAPDU)

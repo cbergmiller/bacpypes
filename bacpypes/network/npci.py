@@ -55,25 +55,25 @@ class NPCI(PCI, DebugContents):
 
     def encode(self, pdu):
         """encode the contents of the NPCI into the PDU."""
-        if DEBUG: _logger.debug("encode %s", repr(pdu))
+        if DEBUG: _logger.debug('encode %r', pdu)
         PCI.update(pdu, self)
         # only version 1 messages supported
         pdu.put(self.npduVersion)
         # build the flags
         if self.npduNetMessage is not None:
-            netLayerMessage = 0x80
+            net_layer_message = 0x80
         else:
-            netLayerMessage = 0x00
+            net_layer_message = 0x00
         # map the destination address
-        dnetPresent = 0x00
+        dnet_present = 0x00
         if self.npduDADR is not None:
-            dnetPresent = 0x20
+            dnet_present = 0x20
         # map the source address
-        snetPresent = 0x00
+        snet_present = 0x00
         if self.npduSADR is not None:
-            snetPresent = 0x08
+            snet_present = 0x08
         # encode the control octet
-        control = netLayerMessage | dnetPresent | snetPresent
+        control = net_layer_message | dnet_present | snet_present
         if self.pduExpectingReply:
             control |= 0x04
         control |= (self.pduNetworkPriority & 0x03)
@@ -83,7 +83,7 @@ class NPCI(PCI, DebugContents):
         pdu.pduExpectingReply = self.pduExpectingReply
         pdu.pduNetworkPriority = self.pduNetworkPriority
         # encode the destination address
-        if dnetPresent:
+        if dnet_present:
             if self.npduDADR.addrType == Address.remoteStationAddr:
                 pdu.put_short(self.npduDADR.addrNet)
                 pdu.put(self.npduDADR.addrLen)
@@ -95,15 +95,15 @@ class NPCI(PCI, DebugContents):
                 pdu.put_short(0xFFFF)
                 pdu.put(0)
         # encode the source address
-        if snetPresent:
+        if snet_present:
             pdu.put_short(self.npduSADR.addrNet)
             pdu.put(self.npduSADR.addrLen)
             pdu.put_data(self.npduSADR.addrAddr)
         # put the hop count
-        if dnetPresent:
+        if dnet_present:
             pdu.put(self.npduHopCount)
         # put the network layer message type (if present)
-        if netLayerMessage:
+        if net_layer_message:
             pdu.put(self.npduNetMessage)
             # put the vendor ID
             if (self.npduNetMessage >= 0x80) and (self.npduNetMessage <= 0xFF):
@@ -111,15 +111,15 @@ class NPCI(PCI, DebugContents):
 
     def decode(self, pdu):
         """decode the contents of the PDU and put them into the NPDU."""
-        if DEBUG: _logger.debug("decode %s", str(pdu))
+        if DEBUG: _logger.debug('decode %r', pdu)
         PCI.update(self, pdu)
         # check the length
         if len(pdu.pduData) < 2:
-            raise DecodingError("invalid length")
+            raise DecodingError('invalid length')
         # only version 1 messages supported
         self.npduVersion = pdu.get()
-        if (self.npduVersion != 0x01):
-            raise DecodingError("only version 1 messages supported")
+        if self.npduVersion != 0x01:
+            raise DecodingError('only version 1 messages supported')
         # decode the control octet
         self.npduControl = control = pdu.get()
         netLayerMessage = control & 0x80
@@ -144,9 +144,9 @@ class NPCI(PCI, DebugContents):
             slen = pdu.get()
             sadr = pdu.get_data(slen)
             if snet == 0xFFFF:
-                raise DecodingError("SADR can't be a global broadcast")
+                raise DecodingError('SADR can\'t be a global broadcast')
             elif slen == 0:
-                raise DecodingError("SADR can't be a remote broadcast")
+                raise DecodingError('SADR can\'t be a remote broadcast')
             self.npduSADR = RemoteStation(snet, sadr)
         # extract the hop count
         if dnetPresent:
@@ -163,10 +163,10 @@ class NPCI(PCI, DebugContents):
 
     def npci_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug("npci_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug('npci_contents use_dict=%r as_class=%r', use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
-            if DEBUG: _logger.debug("    - new use_dict")
+            if DEBUG: _logger.debug('    - new use_dict')
             use_dict = as_class()
         # version and control are simple
         use_dict.__setitem__('version', self.npduVersion)

@@ -30,18 +30,15 @@ class PickleActorMixIn:
                 msg = pickle.load(strm)
             except:
                 break
-
             # got a message
             rpdu = PDU(msg)
             rpdu.update(pdu)
-
             super(PickleActorMixIn, self).response(rpdu)
-
             # see where we are
             pos = strm.tell()
 
         # save anything left over, if there is any
-        if (pos < strm.len):
+        if pos < strm.len:
             self.pickleBuffer = self.pickleBuffer[pos:]
         else:
             self.pickleBuffer = ''

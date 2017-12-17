@@ -140,7 +140,7 @@ class ReadWritePropertyServices(Capability):
                 value = apdu.propertyValue.cast_out(datatype)
             if DEBUG: _logger.debug("    - value: %r", value)
             # change the value
-            value = obj.WriteProperty(apdu.propertyIdentifier, value, apdu.propertyArrayIndex, apdu.priority)
+            obj.WriteProperty(apdu.propertyIdentifier, value, apdu.propertyArrayIndex, apdu.priority)
             # success
             resp = SimpleAckPDU(context=apdu)
             if DEBUG: _logger.debug("    - resp: %r", resp)

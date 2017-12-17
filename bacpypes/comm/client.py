@@ -14,7 +14,7 @@ class Client:
     Client
     """
     def __init__(self, cid=None):
-        if DEBUG: _logger.debug("__init__ cid=%r", cid)
+        if DEBUG: _logger.debug('__init__ cid=%r', cid)
         self.clientID = cid
         self.clientPeer = None
         if cid is not None:
@@ -29,7 +29,7 @@ class Client:
                 bind(self, server)
 
     def request(self, *args, **kwargs):
-        if DEBUG: _logger.debug("request %r %r", args, kwargs)
+        if DEBUG: _logger.debug('request %r %r', args, kwargs)
         if not self.clientPeer:
             raise ConfigurationError('unbound client')
         self.clientPeer.indication(*args, **kwargs)

@@ -21,7 +21,7 @@ class PDUData:
     """
 
     def __init__(self, data=None, *args, **kwargs):
-        if DEBUG: _logger.debug("__init__ %r %r %r", data, args, kwargs)
+        if DEBUG: _logger.debug('__init__ %r %r %r', data, args, kwargs)
         # this call will fail if there are args or kwargs, but not if there
         # is another class in the __mro__ of this thing being constructed
         super(PDUData, self).__init__(*args, **kwargs)
@@ -87,11 +87,11 @@ class PDUData:
                 hexed = btox(self.pduData, '.')
             file.write("%spduData = x'%s'\n" % ('    ' * indent, hexed))
         else:
-            file.write("%spduData = %r\n" % ('    ' * indent, self.pduData))
+            file.write('%spduData = %r\n' % ('    ' * indent, self.pduData))
 
     def pdudata_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug("pdudata_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug('pdudata_contents use_dict=%r as_class=%r', use_dict, as_class)
 
         # make/extend the dictionary of content
         if use_dict is None:
@@ -109,5 +109,5 @@ class PDUData:
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug('dict_contents use_dict=%r as_class=%r', use_dict, as_class)
         return self.pdudata_contents(use_dict=use_dict, as_class=as_class)

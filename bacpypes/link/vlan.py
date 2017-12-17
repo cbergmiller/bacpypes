@@ -7,24 +7,20 @@ Virtual Local Area Network
 import random
 import socket
 import struct
+import logging
 from copy import deepcopy
 
-from .errors import ConfigurationError
-from .debugging import ModuleLogger, bacpypes_debugging
+from ..errors import ConfigurationError
+from ..link import Address
+from ..comm import Client, Server, bind
+from ..task import call_soon
 
-from .pdu import Address
-from .comm import Client, Server, bind
-from .task import call_soon
-
-# some debugging
-_debug = 0
-_log = ModuleLogger(globals())
+_logger = logging.getLogger(__name__)
 
 
-@bacpypes_debugging
 class Network:
     def __init__(self, name='', broadcast_address=None, drop_percent=0.0):
-        if _debug: Network._debug("__init__ name=%r broadcast_address=%r drop_percent=%r", name, broadcast_address, drop_percent)
+        _logger.debug('__init__ name=%r broadcast_address=%r drop_percent=%r', name, broadcast_address, drop_percent)
         self.name = name
         self.nodes = []
         self.broadcast_address = broadcast_address
@@ -32,16 +28,16 @@ class Network:
 
     def add_node(self, node):
         """ Add a node to this network, let the node know which network it's on."""
-        if _debug: Network._debug("add_node %r", node)
+        _logger.debug('add_node %r', node)
         self.nodes.append(node)
         node.lan = self
         # update the node name
         if not node.name:
-            node.name = '%s:%s' % (self.name, node.address)
+            node.name = f'{self.name}:{node.address}'
 
     def remove_node(self, node):
         """ Remove a node from this network. """
-        if _debug: Network._debug("remove_node %r", node)
+        _logger.debug('remove_node %r', node)
         self.nodes.remove(node)
         node.lan = None
 
@@ -49,23 +45,23 @@ class Network:
         """
         Process a PDU by sending a copy to each node as dictated by the addressing and if a node is promiscuous.
         """
-        if _debug: Network._debug("process_pdu(%s) %r", self.name, pdu)
+        _logger.debug('process_pdu(%s) %r', self.name, pdu)
         # randomly drop a packet
         if self.drop_percent != 0.0:
             if (random.random() * 100.0) < self.drop_percent:
-                if _debug: Network._debug("    - packet dropped")
+                _logger.debug('    - packet dropped')
                 return
         if pdu.pduDestination == self.broadcast_address:
-            if _debug: Network._debug("    - broadcast")
+            _logger.debug('    - broadcast')
             for node in self.nodes:
                 if (pdu.pduSource != node.address):
-                    if _debug: Network._debug("    - match: %r", node)
+                    _logger.debug('    - match: %r', node)
                     node.response(deepcopy(pdu))
         else:
-            if _debug: Network._debug("    - unicast")
+            _logger.debug('    - unicast')
             for node in self.nodes:
                 if node.promiscuous or (pdu.pduDestination == node.address):
-                    if _debug: Network._debug("    - match: %r", node)
+                    _logger.debug('    - match: %r', node)
                     node.response(deepcopy(pdu))
 
     def __len__(self):
@@ -73,14 +69,11 @@ class Network:
         return len(self.nodes)
 
 
-@bacpypes_debugging
 class Node(Server):
 
     def __init__(self, addr, lan=None, name='', promiscuous=False, spoofing=False, sid=None):
-        if _debug:
-            Node._debug("__init__ %r lan=%r name=%r, promiscuous=%r spoofing=%r sid=%r",
-                addr, lan, name, promiscuous, spoofing, sid
-                )
+        _logger.debug('__init__ %r lan=%r name=%r, promiscuous=%r spoofing=%r sid=%r',
+                addr, lan, name, promiscuous, spoofing, sid)
         Server.__init__(self, sid)
         self.lan = None
         self.address = addr
@@ -94,33 +87,28 @@ class Node(Server):
 
     def bind(self, lan):
         """bind to a LAN."""
-        if _debug: Node._debug("bind %r", lan)
+        _logger.debug('bind %r', lan)
         lan.add_node(self)
 
     def indication(self, pdu):
         """Send a message."""
-        if _debug: Node._debug("indication(%s) %r", self.name, pdu)
+        _logger.debug('indication(%s) %r', self.name, pdu)
         # make sure we're connected
         if not self.lan:
-            raise ConfigurationError("unbound node")
+            raise ConfigurationError('unbound node')
         # if the pduSource is unset, fill in our address, otherwise
         # leave it alone to allow for simulated spoofing
         if pdu.pduSource is None:
             pdu.pduSource = self.address
         elif (not self.spoofing) and (pdu.pduSource != self.address):
-            raise RuntimeError("spoofing address conflict")
+            raise RuntimeError('spoofing address conflict')
         # actual network delivery is a zero-delay task
         call_soon(self.lan.process_pdu, pdu)
 
     def __repr__(self):
-        return "<%s(%s) at %s>" % (
-            self.__class__.__name__,
-            self.name,
-            hex(id(self)),
-            )
+        return f'<{self.__class__.__name__}({self.name}) at {hex(id(self))}>'
 
 
-@bacpypes_debugging
 class IPNetwork(Network):
     """
     IPNetwork instances are Network objects where the addresses on the
@@ -130,21 +118,20 @@ class IPNetwork(Network):
     """
 
     def __init__(self):
-        if _debug: IPNetwork._debug("__init__")
+        _logger.debug('__init__')
         Network.__init__(self)
 
     def add_node(self, node):
-        if _debug: IPNetwork._debug("add_node %r", node)
+        _logger.debug('add_node %r', node)
         # first node sets the broadcast tuple, other nodes much match
         if not self.nodes:
             self.broadcast_address = node.addrBroadcastTuple
         elif node.addrBroadcastTuple != self.broadcast_address:
-            raise ValueError("nodes must all have the same broadcast tuple")
+            raise ValueError('nodes must all have the same broadcast tuple')
         # continue along
         Network.add_node(self, node)
 
 
-@bacpypes_debugging
 class IPNode(Node):
     """
     An IPNode is a Node where the address is an Address that has an address
@@ -152,7 +139,7 @@ class IPNode(Node):
     """
 
     def __init__(self, addr, lan=None, promiscuous=False, spoofing=False, sid=None):
-        if _debug: IPNode._debug("__init__ %r lan=%r", addr, lan)
+        _logger.debug('__init__ %r lan=%r', addr, lan)
         # make sure it's an Address that has appropriate pieces
         if not isinstance(addr, Address) or (not hasattr(addr, 'addrTuple')) \
             or (not hasattr(addr, 'addrBroadcastTuple')):
@@ -164,11 +151,10 @@ class IPNode(Node):
         Node.__init__(self, addr.addrTuple, lan=lan, promiscuous=promiscuous, spoofing=spoofing, sid=sid)
 
 
-@bacpypes_debugging
 class IPRouterNode(Client):
 
     def __init__(self, router, addr, lan=None):
-        if _debug: IPRouterNode._debug("__init__ %r %r lan=%r", router, addr, lan)
+        _logger.debug('__init__ %r %r lan=%r', router, addr, lan)
         # save the reference to the router
         self.router = router
         # make ourselves an IPNode and bind to it
@@ -179,39 +165,38 @@ class IPRouterNode(Client):
         self.addrSubnet = addr.addrSubnet
 
     def confirmation(self, pdu):
-        if _debug: IPRouterNode._debug("confirmation %r", pdu)
+        _logger.debug('confirmation %r', pdu)
         self.router.process_pdu(self, pdu)
 
     def process_pdu(self, pdu):
-        if _debug: IPRouterNode._debug("process_pdu %r", pdu)
+        _logger.debug('process_pdu %r', pdu)
         # pass it downstream
         self.request(pdu)
 
 
-@bacpypes_debugging
 class IPRouter:
 
     def __init__(self):
-        if _debug: IPRouter._debug("__init__")
+        _logger.debug('__init__')
         # connected network nodes
         self.nodes = []
 
     def add_network(self, addr, lan):
-        if _debug: IPRouter._debug("add_network %r %r", addr, lan)
+        _logger.debug('add_network %r %r', addr, lan)
         node = IPRouterNode(self, addr, lan)
-        if _debug: IPRouter._debug("    - node: %r", node)
+        _logger.debug('    - node: %r', node)
         self.nodes.append(node)
 
     def process_pdu(self, node, pdu):
-        if _debug: IPRouter._debug("process_pdu %r %r", node, pdu)
+        _logger.debug('process_pdu %r %r', node, pdu)
         # unpack the address part of the destination
         addrstr = socket.inet_aton(pdu.pduDestination[0])
         ipaddr = struct.unpack('!L', addrstr)[0]
-        if _debug: IPRouter._debug("    - ipaddr: %r", ipaddr)
+        _logger.debug('    - ipaddr: %r', ipaddr)
         # loop through the other nodes
         for inode in self.nodes:
             if inode is not node:
                 if (ipaddr & inode.addrMask) == inode.addrSubnet:
-                    if _debug: IPRouter._debug("    - inode: %r", inode)
+                    _logger.debug('    - inode: %r', inode)
                     inode.process_pdu(pdu)
 

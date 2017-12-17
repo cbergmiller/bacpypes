@@ -89,7 +89,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
         # make a more focused interpretation
         atype = apdu_types.get(pdu.apduType)
         if not atype:
-            _logger.warning(f'    - unknown apduType: {pdu.apduType!r}')
+            _logger.warning('    - unknown apduType: %r', pdu.apduType)
             return
         # decode it
         apdu = atype()
@@ -197,7 +197,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             # warning for bogus requests
             if (apdu.pduDestination.addrType != Address.localStationAddr) and (
                     apdu.pduDestination.addrType != Address.remoteStationAddr):
-                _logger.warning(f'{apdu.pduDestination} is not a local or remote station')
+                _logger.warning('%s is not a local or remote station', apdu.pduDestination)
             # find the remote device information
             remote_device = self.deviceInfoCache.get_device_info(apdu.pduDestination)
             # create a client transaction state machine

@@ -102,6 +102,6 @@ class APCI(PCI):
             # save the mapped value
             use_dict.__setitem__(attr, mapped_value)
         # return what we built/updated
-        _logger.info(f'apci_contents {use_dict}')
+        _logger.info('apci_contents %r', use_dict)
         return use_dict
 

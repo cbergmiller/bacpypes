@@ -75,7 +75,7 @@ class Address:
 
     def decode_address(self, addr):
         """Initialize the address from a string.  Lots of different forms are supported."""
-        if DEBUG: _logger.debug(f'decode_address {addr!r} ({type(addr)})')
+        if DEBUG: _logger.debug('decode_address %r (%s)', addr, type(addr))
         # start out assuming this is a local station
         self.addrType = Address.localStationAddr
         self.addrNet = None
@@ -134,14 +134,14 @@ class Address:
                 self.addrPort = int(port)
                 self.addrTuple = (addr, self.addrPort)
 
-                addrstr = socket.inet_aton(addr)
-                self.addrIP = struct.unpack('!L', addrstr)[0]
+                addr_str = socket.inet_aton(addr)
+                self.addrIP = struct.unpack('!L', addr_str)[0]
                 self.addrMask = (_long_mask << (32 - int(mask))) & _long_mask
                 self.addrHost = (self.addrIP & ~self.addrMask)
                 self.addrSubnet = (self.addrIP & self.addrMask)
                 bcast = (self.addrSubnet | ~self.addrMask)
                 self.addrBroadcastTuple = (socket.inet_ntoa(struct.pack('!L', bcast & _long_mask)), self.addrPort)
-                self.addrAddr = addrstr + struct.pack('!H', self.addrPort & _short_mask)
+                self.addrAddr = addr_str + struct.pack('!H', self.addrPort & _short_mask)
                 self.addrLen = 6
 
             elif ethernet_re.match(addr):
@@ -224,21 +224,21 @@ class Address:
                     self.addrPort = 47808
                 interfaces = netifaces.interfaces()
                 if interface not in interfaces:
-                    raise ValueError('not an interface: %s' % (interface,))
+                    raise ValueError(f'not an interface: {interface}')
                 if DEBUG: _logger.debug('    - interfaces: %r', interfaces)
                 ifaddresses = netifaces.ifaddresses(interface)
                 if netifaces.AF_INET not in ifaddresses:
-                    raise ValueError('interface does not support IPv4: %s' % (interface,))
+                    raise ValueError(f'interface does not support IPv4: {interface}')
                 ipv4addresses = ifaddresses[netifaces.AF_INET]
                 if len(ipv4addresses) > 1:
-                    raise ValueError('interface supports multiple IPv4 addresses: %s' % (interface,))
+                    raise ValueError(f'interface supports multiple IPv4 addresses: {interface}')
                 ifaddress = ipv4addresses[0]
                 if DEBUG: _logger.debug('    - ifaddress: %r', ifaddress)
                 addr = ifaddress['addr']
                 self.addrTuple = (addr, self.addrPort)
                 if DEBUG: _logger.debug('    - addrTuple: %r', self.addrTuple)
-                addrstr = socket.inet_aton(addr)
-                self.addrIP = struct.unpack('!L', addrstr)[0]
+                addr_str = socket.inet_aton(addr)
+                self.addrIP = struct.unpack('!L', addr_str)[0]
                 if 'netmask' in ifaddress:
                     maskstr = socket.inet_aton(ifaddress['netmask'])
                     self.addrMask = struct.unpack('!L', maskstr)[0]
@@ -251,7 +251,7 @@ class Address:
                 else:
                     self.addrBroadcastTuple = None
                 if DEBUG: _logger.debug('    - addrBroadcastTuple: %r', self.addrBroadcastTuple)
-                self.addrAddr = addrstr + struct.pack('!H', self.addrPort & _short_mask)
+                self.addrAddr = addr_str + struct.pack('!H', self.addrPort & _short_mask)
                 self.addrLen = 6
             else:
                 raise ValueError('unrecognized format')
@@ -264,22 +264,22 @@ class Address:
                     # when ('', n) is passed it is the local host address, but that
                     # could be more than one on a multihomed machine, the empty string
                     # means "any".
-                    addrstr = b'\0\0\0\0'
+                    addr_str = b'\0\0\0\0'
                 else:
-                    addrstr = socket.inet_aton(addr)
+                    addr_str = socket.inet_aton(addr)
                 self.addrTuple = (addr, self.addrPort)
             elif isinstance(addr, int):
-                addrstr = struct.pack('!L', addr & _long_mask)
-                self.addrTuple = (socket.inet_ntoa(addrstr), self.addrPort)
+                addr_str = struct.pack('!L', addr & _long_mask)
+                self.addrTuple = (socket.inet_ntoa(addr_str), self.addrPort)
             else:
                 raise TypeError('tuple must be (string, port) or (long, port)')
-            if DEBUG: _logger.debug('    - addrstr: %r', addrstr)
-            self.addrIP = struct.unpack('!L', addrstr)[0]
+            if DEBUG: _logger.debug('    - addr_str: %r', addr_str)
+            self.addrIP = struct.unpack('!L', addr_str)[0]
             self.addrMask = _long_mask
             self.addrHost = None
             self.addrSubnet = None
             self.addrBroadcastTuple = self.addrTuple
-            self.addrAddr = addrstr + struct.pack('!H', self.addrPort & _short_mask)
+            self.addrAddr = addr_str + struct.pack('!H', self.addrPort & _short_mask)
             self.addrLen = 6
         else:
             raise TypeError('integer, string or tuple required')
@@ -298,29 +298,29 @@ class Address:
                 if (len(self.addrAddr) == 6) and (port >= 47808) and (port <= 47823):
                     rslt += '.'.join(['%d' % (x) for x in self.addrAddr[0:4]])
                     if port != 47808:
-                        rslt += ':' + str(port)
+                        rslt += f':{port}'
                 else:
-                    rslt += '0x' + btox(self.addrAddr)
+                    rslt += f'0x{btox(self.addrAddr)}'
             return rslt
         elif self.addrType == Address.remoteBroadcastAddr:
-            return '%d:*' % (self.addrNet,)
+            return f'{self.addrNet}:*'
         elif self.addrType == Address.remoteStationAddr:
-            rslt = '%d:' % (self.addrNet,)
+            rslt = f'{self.addrNet}:'
             if self.addrLen == 1:
                 rslt += str(self.addrAddr[0])
             else:
                 port = struct.unpack('!H', self.addrAddr[-2:])[0]
                 if (len(self.addrAddr) == 6) and (port >= 47808) and (port <= 47823):
-                    rslt += '.'.join(['%d' % (x) for x in self.addrAddr[0:4]])
+                    rslt += '.'.join(['%d' % x for x in self.addrAddr[0:4]])
                     if port != 47808:
-                        rslt += ':' + str(port)
+                        rslt += f':{port}'
                 else:
-                    rslt += '0x' + btox(self.addrAddr)
+                    rslt += f'0x{btox(self.addrAddr)}'
             return rslt
         elif self.addrType == Address.globalBroadcastAddr:
             return '*:*'
         else:
-            raise TypeError('unknown address type %d' % self.addrType)
+            raise TypeError(f'unknown address type {self.addrType}')
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.__str__())
@@ -340,6 +340,6 @@ class Address:
 
     def dict_contents(self, use_dict=None, as_class=None):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug(f'dict_contents use_dict={use_dict!r} as_class={as_class!r}', use_dict, as_class)
+        if DEBUG: _logger.debug('dict_contents use_dict=%r} as_class=%r', use_dict, as_class)
         # exception to the rule of returning a dict
         return str(self)

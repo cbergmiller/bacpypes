@@ -47,7 +47,6 @@ class StreamToPacket(Client, Server):
                 buff = packet[1]
             # save what didn't get sent
             streamBuffer[addr] = buff
-
         # buffer related to the addresses
         if pdu.pduSource:
             for pdu in chop(pdu.pduSource):

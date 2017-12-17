@@ -14,7 +14,7 @@ class PDU(PCI, PDUData):
     PDU
     """
     def __init__(self, data=None, **kwargs):
-        if DEBUG: _logger.debug("__init__ %r %r", data, kwargs)
+        if DEBUG: _logger.debug('__init__ %r %r', data, kwargs)
         # pick up some optional kwargs
         user_data = kwargs.get('user_data', None)
         source = kwargs.get('source', None)
@@ -35,7 +35,7 @@ class PDU(PCI, PDUData):
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug('dict_contents use_dict=%r as_class=%r', use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()

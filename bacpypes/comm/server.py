@@ -14,7 +14,7 @@ class Server:
     Server
     """
     def __init__(self, sid=None):
-        if DEBUG: _logger.debug("__init__ sid=%r", sid)
+        if DEBUG: _logger.debug('__init__ sid=%r', sid)
         self.serverID = sid
         self.serverPeer = None
         if sid is not None:
@@ -32,7 +32,7 @@ class Server:
         raise NotImplementedError('indication must be overridden')
 
     def response(self, *args, **kwargs):
-        if DEBUG: _logger.debug("response %r %r", args, kwargs)
+        if DEBUG: _logger.debug('response %r %r', args, kwargs)
         if not self.serverPeer:
             raise ConfigurationError('unbound server')
         self.serverPeer.confirmation(*args, **kwargs)

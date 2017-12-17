@@ -21,8 +21,7 @@ class UDPDirector(asyncio.DatagramProtocol, Server, ServiceAccessPoint):
     Network protocol for use with the AbstractEventLoop.create_datagram_endpoint() method.
     """
     def __init__(self, timeout=0, actor_class=UDPActor, sid=None, sapID=None, **kwargs):
-        if DEBUG: _logger.debug(
-            f'__init__ timeout={timeout} actorClass={actor_class!r} sid={sid} sapID={sapID} kwargs={kwargs!r}')
+        if DEBUG: _logger.debug('__init__ timeout=%s actorClass=%r sid=%s sapID=%s kwargs=%r', timeout, actor_class, sid, sapID, kwargs)
         Server.__init__(self, sid)
         ServiceAccessPoint.__init__(self, sapID)
         # check the actor class
@@ -97,7 +96,6 @@ class UDPDirector(asyncio.DatagramProtocol, Server, ServiceAccessPoint):
         self.transport.close()
 
     def send_request(self, pdu):
-        _logger.info(f'upd send_request to {pdu.pduDestination}')
         self.transport.sendto(pdu.pduData, addr=pdu.pduDestination)
 
     def indication(self, pdu):

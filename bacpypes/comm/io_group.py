@@ -18,7 +18,7 @@ class IOGroup(IOCB, DebugContents):
 
     def __init__(self):
         """Initialize a group."""
-        _logger.debug("__init__")
+        _logger.debug('__init__')
         IOCB.__init__(self)
         # start with an empty list of members
         self.ioMembers = []
@@ -33,7 +33,7 @@ class IOGroup(IOCB, DebugContents):
         Add an IOCB to the group, you can also add other groups.
         :param iocb: an IOCB to include in the group
         """
-        _logger.debug("add %r", iocb)
+        _logger.debug('add %r', iocb)
         # add this to our members
         self.ioMembers.append(iocb)
         # assume all of our members have not completed yet
@@ -51,14 +51,14 @@ class IOGroup(IOCB, DebugContents):
         have, trigger the group as completed.
         : param iocb: the member IOCB that has completed
         """
-        _logger.debug("group_callback %r", iocb)
+        _logger.debug('group_callback %r', iocb)
         # check all the members
         for iocb in self.ioMembers:
             if not iocb.io_complete.isSet():
-                _logger.debug("    - waiting for child: %r", iocb)
+                _logger.debug('    - waiting for child: %r', iocb)
                 break
         else:
-            _logger.debug("    - all children complete")
+            _logger.debug('    - all children complete')
             # everything complete
             self.io_state = COMPLETED
             self.trigger()
@@ -67,7 +67,7 @@ class IOGroup(IOCB, DebugContents):
         """Called by a client to abort all of the member transactions.
         When the last pending member is aborted the group callback
         function will be called."""
-        _logger.debug("abort %r", err)
+        _logger.debug('abort %r', err)
         # change the state to reflect that it was killed
         self.io_state = ABORTED
         self.io_error = err

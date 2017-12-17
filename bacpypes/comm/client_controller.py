@@ -21,22 +21,22 @@ class ClientController(Client, IOQController):
     request then subsequent requests are queued.
     """
     def __init__(self):
-        _logger.debug("__init__")
+        _logger.debug('__init__')
         Client.__init__(self)
         IOQController.__init__(self)
 
     def _process_io(self, iocb):
-        _logger.debug("process_io %r", iocb)
+        _logger.debug('process_io %r', iocb)
         # this is now an active request
         self.active_io(iocb)
         # send the PDU downstream
         self.request(iocb.args[0])
 
     def confirmation(self, pdu):
-        _logger.debug("confirmation %r", pdu)
+        _logger.debug('confirmation %r', pdu)
         # make sure it has an active iocb
         if not self.active_iocb:
-            _logger.debug("no active request")
+            _logger.debug('no active request')
             return
         # look for exceptions
         if isinstance(pdu, Exception):

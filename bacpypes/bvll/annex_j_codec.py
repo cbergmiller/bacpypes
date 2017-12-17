@@ -12,12 +12,12 @@ __all__ = ['AnnexJCodec']
 class AnnexJCodec(Client, Server):
 
     def __init__(self, cid=None, sid=None):
-        if DEBUG: _logger.debug("__init__ cid=%r sid=%r", cid, sid)
+        if DEBUG: _logger.debug('__init__ cid=%r sid=%r', cid, sid)
         Client.__init__(self, cid)
         Server.__init__(self, sid)
 
     def indication(self, rpdu):
-        if DEBUG: _logger.debug("indication %r", rpdu)
+        if DEBUG: _logger.debug('indication %r', rpdu)
         # encode it as a generic BVLL PDU
         bvlpdu = BVLPDU()
         rpdu.encode(bvlpdu)
@@ -28,7 +28,7 @@ class AnnexJCodec(Client, Server):
         self.request(pdu)
 
     def confirmation(self, pdu):
-        if DEBUG: _logger.debug("confirmation %r", pdu)
+        if DEBUG: _logger.debug('confirmation %r', pdu)
         # interpret as a BVLL PDU
         bvlpdu = BVLPDU()
         bvlpdu.decode(pdu)

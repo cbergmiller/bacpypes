@@ -25,7 +25,7 @@ __all__ = ['bind']
 
 def bind(*args):
     """bind a list of clients and servers together, top down."""
-    if DEBUG: _logger.debug("bind %r", args)
+    if DEBUG: _logger.debug('bind %r', args)
     # generic bind is pairs of names
     if not args:
         # find unbound clients and bind them
@@ -43,11 +43,10 @@ def bind(*args):
         for sid, server in server_map.items():
             if server.serverPeer:
                 continue
-
             if sid not in client_map:
                 raise RuntimeError(f'unmatched client {sid!r}')
             else:
-                raise RuntimeError(f'mistery unbound server {sid!r}')
+                raise RuntimeError(f'mystery unbound server {sid!r}')
         # find unbound application service elements and bind them
         for eid, element in element_map.items():
             # skip those that are already bound
@@ -56,6 +55,7 @@ def bind(*args):
             if eid not in service_map:
                 raise RuntimeError(f'unmatched element {cid!r}')
             service = service_map[eid]
+            # ToDo: should'nt this be `service` rather than `server`
             if server.serverPeer:
                 raise RuntimeError(f'service already bound {cid!r}')
             bind(element, service)
@@ -66,7 +66,7 @@ def bind(*args):
             if sid not in element_map:
                 raise RuntimeError(f'unmatched service {sid!r}')
             else:
-                raise RuntimeError(f'mistery unbound service {sid!r}')
+                raise RuntimeError(f'mystery unbound service {sid!r}')
     # Hack to prevent cyclic import
     from .client import Client
     from .server import Server
@@ -75,9 +75,9 @@ def bind(*args):
     # go through the argument pairs
     for i in range(len(args)-1):
         client = args[i]
-        if DEBUG: _logger.debug("    - client: %r", client)
+        if DEBUG: _logger.debug('    - client: %r', client)
         server = args[i+1]
-        if DEBUG: _logger.debug("    - server: %r", server)
+        if DEBUG: _logger.debug('    - server: %r', server)
         # make sure we're binding clients and servers
         if isinstance(client, Client) and isinstance(server, Server):
             client.clientPeer = server
@@ -88,6 +88,6 @@ def bind(*args):
             server.serviceElement = client
         # error
         else:
-            raise TypeError("bind() requires a client and server")
-        if DEBUG: _logger.debug("    - bound")
+            raise TypeError('bind() requires a client and server')
+        if DEBUG: _logger.debug('    - bound')
 

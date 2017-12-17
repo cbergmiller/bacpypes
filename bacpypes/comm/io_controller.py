@@ -19,7 +19,7 @@ class IOController(object):
     """
     def __init__(self, name=None):
         """Initialize a controller."""
-        _logger.debug(f'__init__ name={name!r}')
+        _logger.debug('__init__ name=%r', name)
         # save the name
         self.name = name
 
@@ -37,7 +37,7 @@ class IOController(object):
         This method is called by the application requesting the service of a controller.
         :param iocb: the IOCB to be processed
         """
-        _logger.debug(f'request_io {iocb!r}')
+        _logger.debug('request_io %r', iocb)
         # check that the parameter is an IOCB
         if not isinstance(iocb, IOCB):
             raise TypeError('IOCB expected')
@@ -72,10 +72,10 @@ class IOController(object):
         to other types of applications that the IOCB is being processed.
         :param iocb: the IOCB being processed
         """
-        _logger.debug(f'active_io {iocb!r}')
+        _logger.debug('active_io %r', iocb)
         # requests should be idle or pending before coming active
         if (iocb.io_state != IDLE) and (iocb.io_state != PENDING):
-            raise RuntimeError("invalid state transition (currently %d)" % (iocb.io_state,))
+            raise RuntimeError(f'invalid state transition (currently {iocb.io_state})')
         # change the state
         iocb.io_state = ACTIVE
 
@@ -89,7 +89,7 @@ class IOController(object):
         :param iocb: the IOCB to be processed
         :param msg: the message to be returned
         """
-        _logger.debug(f'complete_io {iocb!r} {msg!r}')
+        _logger.debug('complete_io %r %r', iocb, msg)
         if iocb.io_state == COMPLETED:
             # if it completed, leave it alone
             pass
@@ -113,7 +113,7 @@ class IOController(object):
         :param iocb: the IOCB to be processed
         :param msg: the error to be returned
         """
-        _logger.debug(f'abort_io {iocb!r} {err!r}')
+        _logger.debug('abort_io %r %r', iocb, err)
         if iocb.io_state == COMPLETED:
             # if it completed, leave it alone
             pass

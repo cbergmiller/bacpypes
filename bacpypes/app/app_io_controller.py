@@ -36,11 +36,11 @@ class ApplicationIOController(IOController, Application):
         # look up the queue
         queue = self.queue_by_address.get(address, None)
         if not queue:
-            _logger.debug(f'no queue for {address!r}')
+            _logger.debug('no queue for %r', address)
             return
         # make sure it has an active iocb
         if not queue.active_iocb:
-            _logger.debug(f'no active request for {address!r}')
+            _logger.debug('no active request for %r', address)
             return
         # this request is complete
         if isinstance(apdu, (None.__class__, SimpleAckPDU, ComplexAckPDU)):

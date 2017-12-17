@@ -9,7 +9,6 @@ from .sap import *
 from .server import *
 from .service_element import *
 from .iocb import *
-from .io_chain import *
 from .io_group import *
 from .io_queue import *
 from .client_controller import *

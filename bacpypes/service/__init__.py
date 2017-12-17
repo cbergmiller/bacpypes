@@ -4,7 +4,6 @@
 Service Subpackage
 """
 
-from . import test
 from . import detect
 
 from . import device

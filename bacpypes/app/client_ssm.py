@@ -141,7 +141,7 @@ class ClientSSM(SSM):
             pass
         else:
             e = RuntimeError('invalid state')
-            _logger.exception(f'exception: {e!r}')
+            _logger.exception('exception: %r', e)
             raise e
 
     def abort(self, reason):

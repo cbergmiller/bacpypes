@@ -22,7 +22,7 @@ def register_bvlpdu_type(cls):
 
 def key_value_contents(use_dict=None, as_class=dict, key_values=()):
     """Return the contents of an object as a dict."""
-    _logger.debug("key_value_contents use_dict=%r as_class=%r key_values=%r", use_dict, as_class, key_values)
+    _logger.debug('key_value_contents use_dict=%r as_class=%r key_values=%r', use_dict, as_class, key_values)
     # make/extend the dictionary of content
     if use_dict is None:
         use_dict = as_class()
@@ -42,7 +42,7 @@ class BVLPDU(BVLCI, PDUData):
     """
 
     def __init__(self, *args, **kwargs):
-        _logger.debug("__init__ %r %r", args, kwargs)
+        _logger.debug('__init__ %r %r', args, kwargs)
         super(BVLPDU, self).__init__(*args, **kwargs)
 
     def encode(self, pdu):
@@ -58,28 +58,23 @@ class BVLPDU(BVLCI, PDUData):
 
     def dict_contents(self, use_dict=None, as_class=dict, key_values=()):
         """Return the contents of an object as a dict."""
-        _logger.debug("dict_contents use_dict=%r as_class=%r key_values=%r", use_dict, as_class, key_values)
-
+        _logger.debug('dict_contents use_dict=%r as_class=%r key_values=%r', use_dict, as_class, key_values)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # call the superclasses
         self.bvlci_contents(use_dict=use_dict, as_class=as_class)
         self.bvlpdu_contents(use_dict=use_dict, as_class=as_class)
-
         # return what we built/updated
         return use_dict
 
 
 class Result(BVLPDU):
     _debug_contents = ('bvlciResultCode',)
-
     messageType = BVLCI.result
 
     def __init__(self, code=None, *args, **kwargs):
         super(Result, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.result
         self.bvlciLength = 6
         self.bvlciResultCode = code
@@ -94,11 +89,14 @@ class Result(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'Result'),
-                                      ('result_code', self.bvlciResultCode),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'Result'),
+                ('result_code', self.bvlciResultCode),
+            )
+        )
 
 
 register_bvlpdu_type(Result)
@@ -111,7 +109,6 @@ class WriteBroadcastDistributionTable(BVLPDU):
 
     def __init__(self, bdt=[], *args, **kwargs):
         super(WriteBroadcastDistributionTable, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.writeBroadcastDistributionTable
         self.bvlciLength = 4 + 10 * len(bdt)
         self.bvlciBDT = bdt
@@ -135,12 +132,14 @@ class WriteBroadcastDistributionTable(BVLPDU):
         broadcast_distribution_table = []
         for bdte in self.bvlciBDT:
             broadcast_distribution_table.append(str(bdte))
-
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'WriteBroadcastDistributionTable'),
-                                      ('bdt', broadcast_distribution_table),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'WriteBroadcastDistributionTable'),
+                ('bdt', broadcast_distribution_table),
+            )
+        )
 
 
 register_bvlpdu_type(WriteBroadcastDistributionTable)
@@ -151,7 +150,6 @@ class ReadBroadcastDistributionTable(BVLPDU):
 
     def __init__(self, *args, **kwargs):
         super(ReadBroadcastDistributionTable, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.readBroadcastDistributionTable
         self.bvlciLength = 4
 
@@ -163,10 +161,11 @@ class ReadBroadcastDistributionTable(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'ReadBroadcastDistributionTable'),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(('function', 'ReadBroadcastDistributionTable'),)
+        )
 
 
 register_bvlpdu_type(ReadBroadcastDistributionTable)
@@ -179,7 +178,6 @@ class ReadBroadcastDistributionTableAck(BVLPDU):
 
     def __init__(self, bdt=[], *args, **kwargs):
         super(ReadBroadcastDistributionTableAck, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.readBroadcastDistributionTableAck
         self.bvlciLength = 4 + 10 * len(bdt)
         self.bvlciBDT = bdt
@@ -187,9 +185,7 @@ class ReadBroadcastDistributionTableAck(BVLPDU):
     def encode(self, bvlpdu):
         # make sure the length is correct
         self.bvlciLength = 4 + 10 * len(self.bvlciBDT)
-
         BVLCI.update(bvlpdu, self)
-
         # encode the table
         for bdte in self.bvlciBDT:
             bvlpdu.put_data(bdte.addrAddr)
@@ -210,12 +206,14 @@ class ReadBroadcastDistributionTableAck(BVLPDU):
         broadcast_distribution_table = []
         for bdte in self.bvlciBDT:
             broadcast_distribution_table.append(str(bdte))
-
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'ReadBroadcastDistributionTableAck'),
-                                      ('bdt', broadcast_distribution_table),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'ReadBroadcastDistributionTableAck'),
+                ('bdt', broadcast_distribution_table),
+            )
+        )
 
 
 register_bvlpdu_type(ReadBroadcastDistributionTableAck)
@@ -228,7 +226,6 @@ class ForwardedNPDU(BVLPDU):
 
     def __init__(self, addr=None, *args, **kwargs):
         super(ForwardedNPDU, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.forwardedNPDU
         self.bvlciLength = 10 + len(self.pduData)
         self.bvlciAddress = addr
@@ -236,41 +233,35 @@ class ForwardedNPDU(BVLPDU):
     def encode(self, bvlpdu):
         # make sure the length is correct
         self.bvlciLength = 10 + len(self.pduData)
-
         BVLCI.update(bvlpdu, self)
-
         # encode the address
         bvlpdu.put_data(self.bvlciAddress.addrAddr)
-
         # encode the rest of the data
         bvlpdu.put_data(self.pduData)
 
     def decode(self, bvlpdu):
         BVLCI.update(self, bvlpdu)
-
         # get the address
         self.bvlciAddress = Address(unpack_ip_addr(bvlpdu.get_data(6)))
-
         # get the rest of the data
         self.pduData = bvlpdu.get_data(len(bvlpdu.pduData))
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # call the normal procedure
-        key_value_contents(use_dict=use_dict, as_class=as_class,
-                           key_values=(
-                               ('function', 'ForwardedNPDU'),
-                               ('address', str(self.bvlciAddress)),
-                           ))
-
+        key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'ForwardedNPDU'),
+                ('address', str(self.bvlciAddress)),
+            )
+        )
         # this message has data
         PDUData.dict_contents(self, use_dict=use_dict, as_class=as_class)
-
         # return what we built/updated
         return use_dict
 
@@ -296,12 +287,10 @@ class FDTEntry(DebugContents):
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # save the content
         use_dict.__setitem__('address', str(self.fdAddress))
         use_dict.__setitem__('ttl', self.fdTTL)
         use_dict.__setitem__('remaining', self.fdRemain)
-
         # return what we built/updated
         return use_dict
 
@@ -313,7 +302,6 @@ class RegisterForeignDevice(BVLPDU):
 
     def __init__(self, ttl=None, *args, **kwargs):
         super(RegisterForeignDevice, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.registerForeignDevice
         self.bvlciLength = 6
         self.bvlciTimeToLive = ttl
@@ -328,11 +316,14 @@ class RegisterForeignDevice(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'RegisterForeignDevice'),
-                                      ('ttl', self.bvlciTimeToLive),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'RegisterForeignDevice'),
+                ('ttl', self.bvlciTimeToLive),
+            )
+        )
 
 
 register_bvlpdu_type(RegisterForeignDevice)
@@ -343,7 +334,6 @@ class ReadForeignDeviceTable(BVLPDU):
 
     def __init__(self, ttl=None, *args, **kwargs):
         super(ReadForeignDeviceTable, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.readForeignDeviceTable
         self.bvlciLength = 4
 
@@ -355,10 +345,13 @@ class ReadForeignDeviceTable(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'ReadForeignDeviceTable'),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'ReadForeignDeviceTable'),
+            )
+        )
 
 
 register_bvlpdu_type(ReadForeignDeviceTable)
@@ -371,7 +364,6 @@ class ReadForeignDeviceTableAck(BVLPDU):
 
     def __init__(self, fdt=[], *args, **kwargs):
         super(ReadForeignDeviceTableAck, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.readForeignDeviceTableAck
         self.bvlciLength = 4 + 10 * len(fdt)
         self.bvlciFDT = fdt
@@ -398,12 +390,14 @@ class ReadForeignDeviceTableAck(BVLPDU):
         foreign_device_table = []
         for fdte in self.bvlciFDT:
             foreign_device_table.append(fdte.dict_contents(as_class=as_class))
-
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'ReadForeignDeviceTableAck'),
-                                      ('foreign_device_table', foreign_device_table),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'ReadForeignDeviceTableAck'),
+                ('foreign_device_table', foreign_device_table),
+            )
+        )
 
 
 register_bvlpdu_type(ReadForeignDeviceTableAck)
@@ -416,7 +410,6 @@ class DeleteForeignDeviceTableEntry(BVLPDU):
 
     def __init__(self, addr=None, *args, **kwargs):
         super(DeleteForeignDeviceTableEntry, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.deleteForeignDeviceTableEntry
         self.bvlciLength = 10
         self.bvlciAddress = addr
@@ -431,11 +424,14 @@ class DeleteForeignDeviceTableEntry(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        return key_value_contents(use_dict=use_dict, as_class=as_class,
-                                  key_values=(
-                                      ('function', 'DeleteForeignDeviceTableEntry'),
-                                      ('address', str(self.bvlciAddress)),
-                                  ))
+        return key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'DeleteForeignDeviceTableEntry'),
+                ('address', str(self.bvlciAddress)),
+            )
+        )
 
 
 register_bvlpdu_type(DeleteForeignDeviceTableEntry)
@@ -461,20 +457,19 @@ class DistributeBroadcastToNetwork(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # call the normal procedure
-        key_value_contents(use_dict=use_dict, as_class=as_class,
-                           key_values=(
-                               ('function', 'DistributeBroadcastToNetwork'),
-                           ))
-
+        key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'DistributeBroadcastToNetwork'),
+            )
+        )
         # this message has data
         PDUData.dict_contents(self, use_dict=use_dict, as_class=as_class)
-
         # return what we built/updated
         return use_dict
 
@@ -487,7 +482,6 @@ class OriginalUnicastNPDU(BVLPDU):
 
     def __init__(self, *args, **kwargs):
         super(OriginalUnicastNPDU, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.originalUnicastNPDU
         self.bvlciLength = 4 + len(self.pduData)
 
@@ -502,20 +496,19 @@ class OriginalUnicastNPDU(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # call the normal procedure
-        key_value_contents(use_dict=use_dict, as_class=as_class,
-                           key_values=(
-                               ('function', 'OriginalUnicastNPDU'),
-                           ))
-
+        key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'OriginalUnicastNPDU'),
+            )
+        )
         # this message has data
         PDUData.dict_contents(self, use_dict=use_dict, as_class=as_class)
-
         # return what we built/updated
         return use_dict
 
@@ -528,7 +521,6 @@ class OriginalBroadcastNPDU(BVLPDU):
 
     def __init__(self, *args, **kwargs):
         super(OriginalBroadcastNPDU, self).__init__(*args, **kwargs)
-
         self.bvlciFunction = BVLCI.originalBroadcastNPDU
         self.bvlciLength = 4 + len(self.pduData)
 
@@ -543,20 +535,19 @@ class OriginalBroadcastNPDU(BVLPDU):
 
     def bvlpdu_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-
         # call the normal procedure
-        key_value_contents(use_dict=use_dict, as_class=as_class,
-                           key_values=(
-                               ('function', 'OriginalBroadcastNPDU'),
-                           ))
-
+        key_value_contents(
+            use_dict=use_dict,
+            as_class=as_class,
+            key_values=(
+                ('function', 'OriginalBroadcastNPDU'),
+            )
+        )
         # this message has data
         PDUData.dict_contents(self, use_dict=use_dict, as_class=as_class)
-
         # return what we built/updated
         return use_dict
 

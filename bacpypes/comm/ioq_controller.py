@@ -17,7 +17,7 @@ CTRL_ACTIVE = 1  # working on an iocb
 CTRL_WAITING = 1  # waiting between iocb requests (throttled)
 
 # current time formatting (short version)
-_strftime = lambda: "%011.6f" % (time.time() % 3600,)
+_strftime = lambda: '%011.6f' % (time.time() % 3600,)
 
 
 class IOQController(IOController):
@@ -30,11 +30,11 @@ class IOQController(IOController):
 
     def __init__(self, name=None):
         """Initialize a queue controller."""
-        _logger.debug(f'__init__ name={name!r}')
+        _logger.debug('__init__ name=%r', name)
         IOController.__init__(self, name)
         # start idle
         self.state = CTRL_IDLE
-        _logger.debug(f'{_strftime()} {self.name} idle')
+        _logger.debug('%s %s idle', _strftime, self.name)
         # no active iocb
         self.active_iocb = None
         # create an IOQueue for iocb's requested when not idle
@@ -46,13 +46,13 @@ class IOQController(IOController):
         All of the queued IOCBs will be aborted with this error.
         :param err: the error to be returned
         """
-        _logger.debug(f'abort {err!r}')
+        _logger.debug('abort %r', err)
         if self.state == CTRL_IDLE:
             _logger.debug('    - idle')
             return
         while not self.io_queue.empty:
             iocb = self.io_queue.get()
-            _logger.debug(f'    - iocb: {iocb!r}')
+            _logger.debug('    - iocb: %r', iocb)
             # change the state
             iocb.io_state = ABORTED
             iocb.io_error = err
@@ -68,12 +68,12 @@ class IOQController(IOController):
         this IOCB is queued until the current processing is complete.
         :param iocb: the IOCB to be processed
         """
-        _logger.debug(f'request_io {iocb!r}')
+        _logger.debug('request_io %r', iocb)
         # bind the iocb to this controller
         iocb.io_controller = self
         # if we're busy, queue it
         if self.state != CTRL_IDLE:
-            _logger.debug(f'    - busy, request queued, active_iocb: {self.active_iocb!r}')
+            _logger.debug('    - busy, request queued, active_iocb: %r', self.active_iocb)
             iocb.io_state = PENDING
             self.io_queue.put(iocb)
             return
@@ -81,7 +81,7 @@ class IOQController(IOController):
             # let derived class figure out how to process this
             self._process_io(iocb)
         except Exception as e:
-            _logger.warning(f'    - process_io() exception: {e!r}')
+            _logger.warning('    - process_io() exception: %r', e)
             # if there was an error, abort the request
             _logger.debug('    - aborting')
             self.abort_io(iocb, e)
@@ -97,7 +97,7 @@ class IOQController(IOController):
         IOController.active_io(self, iocb)
         # change our state
         self.state = CTRL_ACTIVE
-        _logger.debug(f'{_strftime()} {self.name} active')
+        _logger.debug('%s %s active', _strftime, self.name)
         # keep track of the iocb
         self.active_iocb = iocb
 
@@ -106,7 +106,7 @@ class IOQController(IOController):
         Called by a handler to return data to the client.
         :param msg: positive result of request
         """
-        _logger.debug(f'complete_io {iocb!r} {msg!r}')
+        _logger.debug('complete_io %r %r', iocb, msg)
         # check to see if it is completing the active one
         if iocb is not self.active_iocb:
             raise RuntimeError('not the current iocb')
@@ -118,19 +118,19 @@ class IOQController(IOController):
         if self.wait_time:
             # change our state
             self.state = CTRL_WAITING
-            _logger.debug(f'{_strftime()} {self.name} waiting')
+            _logger.debug('%s %s waiting', _strftime, self.name)
             # schedule a call in the future
             call_later(self.wait_time, IOQController._wait_trigger, self)
         else:
             # change our state
             self.state = CTRL_IDLE
-            _logger.debug(f'{_strftime()} {self.name} idle')
+            _logger.debug('%s %s idle', _strftime, self.name)
             # look for more to do
             deferred(IOQController._trigger, self)
 
     def abort_io(self, iocb, err):
         """Called by a handler or a client to abort a transaction."""
-        _logger.debug(f'abort_io {iocb!r} {err!r}')
+        _logger.debug('abort_io %r %r', iocb, err)
         # normal abort
         IOController.abort_io(self, iocb, err)
         # check to see if it is completing the active one
@@ -141,7 +141,7 @@ class IOQController(IOController):
         self.active_iocb = None
         # change our state
         self.state = CTRL_IDLE
-        _logger.debug(f'{_strftime()} {self.name} idle')
+        _logger.debug('%s %s idle', _strftime, self.name)
         # look for more to do
         deferred(IOQController._trigger, self)
 
@@ -179,6 +179,6 @@ class IOQController(IOController):
             raise RuntimeError('not waiting')
         # change our state
         self.state = CTRL_IDLE
-        _logger.debug(f'{_strftime()} {self.name} idle')
+        _logger.debug('%s %s idle', _strftime, self.name)
         # look for more to do
         IOQController._trigger(self)

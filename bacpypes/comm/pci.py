@@ -13,7 +13,7 @@ class PCI:
     _debug_contents = ('pduUserData+', 'pduSource', 'pduDestination')
 
     def __init__(self, *args, **kwargs):
-        if DEBUG: _logger.debug("__init__ %r %r", args, kwargs)
+        if DEBUG: _logger.debug('__init__ %r %r', args, kwargs)
         # split out the keyword arguments that belong to this class
         my_kwargs = {}
         other_kwargs = {}
@@ -23,8 +23,8 @@ class PCI:
         for kw in kwargs:
             if kw not in my_kwargs:
                 other_kwargs[kw] = kwargs[kw]
-        if DEBUG: _logger.debug("    - my_kwargs: %r", my_kwargs)
-        if DEBUG: _logger.debug("    - other_kwargs: %r", other_kwargs)
+        if DEBUG: _logger.debug('    - my_kwargs: %r', my_kwargs)
+        if DEBUG: _logger.debug('    - other_kwargs: %r', other_kwargs)
         # call some superclass, if there is one
         super(PCI, self).__init__(*args, **other_kwargs)
         # pick up some optional kwargs
@@ -40,7 +40,7 @@ class PCI:
 
     def pci_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug("pci_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug('pci_contents use_dict=%r as_class=%r', use_dict, as_class)
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
@@ -57,5 +57,5 @@ class PCI:
 
     def dict_contents(self, use_dict=None, as_class=dict):
         """Return the contents of an object as a dict."""
-        if DEBUG: _logger.debug("dict_contents use_dict=%r as_class=%r", use_dict, as_class)
+        if DEBUG: _logger.debug('dict_contents use_dict=%r as_class=%r', use_dict, as_class)
         return self.pci_contents(use_dict=use_dict, as_class=as_class)
