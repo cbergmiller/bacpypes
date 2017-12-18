@@ -13,7 +13,7 @@ import logging
 from asyncio import get_event_loop
 
 from bacpypes.core import deferred
-from bacpypes.comm import IOCB
+from bacpypes.comm import IOCB, IOGroup
 from bacpypes.link import Address
 from bacpypes.object import get_datatype
 from bacpypes.debugging import LoggingFormatter
@@ -58,13 +58,14 @@ class ReadPointListApplication(BIPSimpleApplication):
             request.pduDestination = Address(addr)
             _logger.debug(f'request: {request}')
             iocb = IOCB(request)
-            self.request_io(iocb)
-            iocb.add_callback(self.complete_device_request)
-            _logger.debug(f'iocb: {iocb}')
+
+        self.request_io(iocb)
+        iocb.add_callback(self.complete_device_request)
+        _logger.debug(f'iocb: {iocb}')
 
     def complete_device_request(self, iocb):
         if iocb.io_error:
-            _logger.debug("    - error: %r", iocb.io_error)
+            _logger.debug("    - io error: %r", iocb.io_error)
             # do something for success
         elif iocb.io_response:
             apdu = iocb.io_response
@@ -89,6 +90,7 @@ class ReadPointListApplication(BIPSimpleApplication):
             self.device_properties[apdu.propertyIdentifier] = value
         else:
             _logger.debug("    - ioError or ioResponse expected")
+        get_event_loop().stop()
 
     def do_multi_request(self, addr):
         _logger.debug('do_request')

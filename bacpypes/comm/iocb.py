@@ -43,6 +43,7 @@ and `add_callback()` functions and can be otherwise treated as an IOCB.
 
 import logging
 import threading
+import asyncio
 
 from ..debugging import DebugContents
 from ..task import call_later
@@ -97,8 +98,7 @@ class IOCB(DebugContents):
         # blocks are bound to a controller
         self.io_controller = None
         # each block gets a completion event
-        self.io_complete = threading.Event()
-        self.io_complete.clear()
+        self.io_complete = asyncio.Event()
         # applications can set a callback functions
         self.io_callback = []
         self.io_priority = 0
@@ -126,18 +126,16 @@ class IOCB(DebugContents):
         # store it
         self.io_callback.append((fn, args, kwargs))
         # already complete?
-        if self.io_complete.isSet():
+        if self.io_complete.is_set():
             self.trigger()
 
-    def wait(self, *args):
+    async def wait(self):
         """
         Block until the IO operation is complete and the positive or negative
-        result has been placed in the ICOB.  The arguments are passed to the
-        `wait()` function of the ioComplete event.
+        result has been placed in the ICOB.
         """
-        _logger.debug('wait(%d) %r', self.io_id, args)
-        # waiting from a non-daemon thread could be trouble
-        self.io_complete.wait(*args)
+        _logger.debug('wait(%d)', self.io_id)
+        await self.io_complete.wait()
 
     def trigger(self):
         """

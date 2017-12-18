@@ -14,14 +14,14 @@ class IOGroup(IOCB, DebugContents):
     An `IOGroup` is like a set that is an IOCB.  The group will complete
     when all of the IOCBs that have been added to the group are complete.
     """
-    _debug_contents = ('ioMembers',)
+    _debug_contents = ('io_members',)
 
     def __init__(self):
         """Initialize a group."""
         _logger.debug('__init__')
         IOCB.__init__(self)
         # start with an empty list of members
-        self.ioMembers = []
+        self.io_members = []
         # start out being done.  When an IOCB is added to the
         # group that is not already completed, this state will
         # change to PENDING.
@@ -35,7 +35,7 @@ class IOGroup(IOCB, DebugContents):
         """
         _logger.debug('add %r', iocb)
         # add this to our members
-        self.ioMembers.append(iocb)
+        self.io_members.append(iocb)
         # assume all of our members have not completed yet
         self.io_state = PENDING
         self.io_complete.clear()
@@ -53,8 +53,8 @@ class IOGroup(IOCB, DebugContents):
         """
         _logger.debug('group_callback %r', iocb)
         # check all the members
-        for iocb in self.ioMembers:
-            if not iocb.io_complete.isSet():
+        for iocb in self.io_members:
+            if not iocb.io_complete.is_set():
                 _logger.debug('    - waiting for child: %r', iocb)
                 break
         else:
@@ -72,7 +72,7 @@ class IOGroup(IOCB, DebugContents):
         self.io_state = ABORTED
         self.io_error = err
         # abort all the members
-        for iocb in self.ioMembers:
+        for iocb in self.io_members:
             iocb.abort(err)
         # notify the client
         self.trigger()

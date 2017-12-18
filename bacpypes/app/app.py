@@ -135,7 +135,6 @@ class Application(ApplicationServiceElement, Collector):
         # double check the input is the right kind of APDU
         if not isinstance(apdu, (UnconfirmedRequestPDU, ConfirmedRequestPDU)):
             raise TypeError('APDU expected')
-
         # continue
         super(Application, self).request(apdu)
 
@@ -151,9 +150,7 @@ class Application(ApplicationServiceElement, Collector):
         # pass the apdu on to the helper function
         try:
             helper_fn(apdu)
-        except RejectException as err:
-            raise
-        except AbortException as err:
+        except (RejectException, AbortException):
             raise
         except ExecutionError as err:
             # send back an error
