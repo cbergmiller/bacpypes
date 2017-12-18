@@ -7,9 +7,10 @@ This application has a static list of points that it would like to read.  It rea
 values of each of them in turn and then quits.
 """
 
-from asyncio import get_event_loop
+
 import pprint
 import logging
+from asyncio import get_event_loop
 
 from bacpypes.core import deferred
 from bacpypes.comm import IOCB
@@ -157,7 +158,6 @@ class ReadPointListApplication(BIPSimpleApplication):
 
 
 def main():
-    _logger.debug('main')
     # make a device object
     this_device = LocalDeviceObject(
         objectName='Energy Box',
@@ -180,7 +180,7 @@ def main():
     this_device.protocolServicesSupported = services_supported.value
     deferred(this_application.do_device_request, 881000, '192.168.2.70')
     deferred(this_application.do_multi_request, '192.168.2.70')
-    _logger.debug("running")
+
     loop = get_event_loop()
     loop.set_debug(True)
     try:

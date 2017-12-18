@@ -5,11 +5,11 @@ Task
 """
 
 import time
+import math
 import asyncio
 import logging
 import functools
 
-DEBUG = True
 _logger = logging.getLogger(__name__)
 
 
@@ -34,7 +34,7 @@ def call_soon(fn, *args, **kwargs):
 
 class RecurringTask:
     """
-    Cyclically scheduled task.
+    Cyclically scheduled function calls.
     """
     def __init__(self, interval=None, offset=None, func=None):
         self.timeout_handle = None
@@ -43,6 +43,11 @@ class RecurringTask:
         self.func = func
 
     def start(self, interval=None, offset=None, func=None):
+        """
+        :param interval: Time between tasks in milliseconds
+        :param offset: Offset (pos.) in milliseconds
+        :param func: Function to call
+        """
         if interval is not None:
             self.interval = interval
         if offset is not None:
@@ -62,15 +67,9 @@ class RecurringTask:
         self.func()
 
     def schedule_next_timeout(self):
-        # get ready for the next interval plus a jitter
-        now = time.time()
-        # interval and offset are in milliseconds to be consistent
-        interval = self.interval / 1000.0
-        if self.offset:
-            offset = self.offset / 1000.0
-        else:
-            offset = 0.0
-        delay = interval - ((now - offset) % interval)
-        _logger.debug(f'delay {delay}')
         loop = asyncio.get_event_loop()
-        loop.call_later(delay, self.handle_timeout)
+        interval = self.interval / 1000
+        when = interval * math.ceil(loop.time() / interval)
+        if self.offset:
+            when += self.offset / 1000
+        loop.call_at(when, self.handle_timeout)
