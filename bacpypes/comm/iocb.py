@@ -74,10 +74,12 @@ class IOCB(DebugContents):
         * *completed* - the processing of the IOCB has completed and the positive results have been stored in `ioResponse`.
         * *aborted* - the processing of the IOCB has encountered an error of some kind and the error condition has been stored in `ioError`.
     """
-    _debug_contents = ('args', 'kwargs', 'io_state', 'io_response-', 'io_error', 'io_controller', 'io_complete',
-                       'io_callback+', 'io_priority', 'io_timeout')
+    _debug_contents = (
+        'io_state', 'io_response-', 'io_error', 'io_controller', 'io_complete', 'io_callback+', 'io_priority',
+        'io_timeout',
+    )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, request, priority=0):
         # lock the identity sequence number
         with _ident_lock:
             # generate a unique identity for this block
@@ -85,12 +87,11 @@ class IOCB(DebugContents):
             io_id = _ident_next
             _ident_next += 1
         # debugging postponed until ID acquired
-        _logger.debug('__init__(%d) %r %r', io_id, args, kwargs)
+        _logger.debug('__init__(%d) request=%r prio=%s', io_id, request, priority)
         # save the ID
         self.io_id = io_id
         # save the request parameters
-        self.args = args
-        self.kwargs = kwargs
+        self.request = request
         # start with an idle request
         self.io_state = IDLE
         self.io_response = None
@@ -101,11 +102,7 @@ class IOCB(DebugContents):
         self.io_complete = asyncio.Event()
         # applications can set a callback functions
         self.io_callback = []
-        self.io_priority = 0
-        # extract the priority if it was given
-        if '_priority' in kwargs:
-            self.io_priority = kwargs.pop('_priority')
-            _logger.debug('    - io priority: %s', self.io_priority)
+        self.io_priority = priority
         # request has no timeout
         self.io_timeout = None
 

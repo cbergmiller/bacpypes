@@ -12,8 +12,7 @@ import pprint
 import logging
 from asyncio import get_event_loop
 
-from bacpypes.core import deferred
-from bacpypes.comm import IOCB, IOGroup
+from bacpypes.comm import IOCB
 from bacpypes.link import Address
 from bacpypes.object import get_datatype
 from bacpypes.debugging import LoggingFormatter
@@ -25,7 +24,7 @@ from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
-_logger.setLevel(logging.DEBUG)
+_logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
@@ -48,8 +47,9 @@ class ReadPointListApplication(BIPSimpleApplication):
         self.device_properties = {}
         self.response_values = {}
 
-    def do_device_request(self, device_id, addr):
+    async def do_device_request(self, device_id, addr):
         _logger.debug(f'    - do_device_request: {device_id} {addr}')
+        iocbs = []
         for property_id in ['objectName',  'modelName', 'vendorName', 'serialNumber', 'objectList']:
             request = ReadPropertyRequest(
                 objectIdentifier=('device', device_id),
@@ -58,10 +58,12 @@ class ReadPointListApplication(BIPSimpleApplication):
             request.pduDestination = Address(addr)
             _logger.debug(f'request: {request}')
             iocb = IOCB(request)
-
-        self.request_io(iocb)
-        iocb.add_callback(self.complete_device_request)
-        _logger.debug(f'iocb: {iocb}')
+            self.request_io(iocb)
+            iocbs.append(iocb)
+        for iocb in iocbs:
+            await iocb.wait()
+        for iocb in iocbs:
+            self.complete_device_request(iocb)
 
     def complete_device_request(self, iocb):
         if iocb.io_error:
@@ -172,18 +174,18 @@ def main():
     points = []
     for i in range(40):
         points.append(('analogInput', i, ['presentValue']))
-    this_application = ReadPointListApplication(points, this_device, '10.81.0.14')
+    app = ReadPointListApplication(points, this_device, '10.81.0.14')
 
     # get the services supported
-    services_supported = this_application.get_services_supported()
+    services_supported = app.get_services_supported()
     _logger.debug(f'    - services_supported: {services_supported}')
 
     # let the device object know
     this_device.protocolServicesSupported = services_supported.value
-    deferred(this_application.do_device_request, 881000, '192.168.2.70')
-    deferred(this_application.do_multi_request, '192.168.2.70')
+    # deferred(app.do_multi_request, '192.168.2.70')
 
     loop = get_event_loop()
+    loop.create_task(app.do_device_request(881000, '192.168.2.70'))
     loop.set_debug(True)
     try:
         loop.run_forever()
@@ -191,8 +193,8 @@ def main():
         loop.close()
 
     # dump out the results
-    pprint.pprint(this_application.device_properties)
-    pprint.pprint(this_application.response_values)
+    pprint.pprint(app.device_properties)
+    pprint.pprint(app.response_values)
 
 
 if __name__ == "__main__":

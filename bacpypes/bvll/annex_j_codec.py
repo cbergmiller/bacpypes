@@ -4,7 +4,7 @@ from ..comm import Client, Server
 from ..link import PDU
 from .bvlpdu import BVLPDU, bvl_pdu_types
 
-DEBUG = True
+DEBUG = False
 _logger = logging.getLogger(__name__)
 __all__ = ['AnnexJCodec']
 

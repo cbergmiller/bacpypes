@@ -10,7 +10,7 @@ from ..link import Address, LocalBroadcast, LocalStation, RemoteStation
 from .npdu import NPDU, WhoIsRouterToNetwork, npdu_types
 from ..apdu import APDU as _APDU
 
-DEBUG = True
+DEBUG = False
 _logger = logging.getLogger(__name__)
 __all__ = ['NetworkServiceAccessPoint']
 

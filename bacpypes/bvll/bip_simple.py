@@ -5,7 +5,7 @@ from ..link import Address, LocalBroadcast, PDU
 from .bvlpdu import ForwardedNPDU, OriginalBroadcastNPDU, OriginalUnicastNPDU, ReadBroadcastDistributionTableAck, ReadForeignDeviceTableAck, Result
 from .bip_sap import BIPSAP
 
-DEBUG = True
+DEBUG = False
 _logger = logging.getLogger(__name__)
 __all__ = ['BIPSimple']
 

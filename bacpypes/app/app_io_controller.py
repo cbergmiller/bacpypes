@@ -1,7 +1,7 @@
 
+import asyncio
 import logging
-from ..comm import IOController, SieveQueue, IOCB
-
+from ..comm import IOQController, IOCB
 from ..apdu import UnconfirmedRequestPDU, SimpleAckPDU, ComplexAckPDU, ErrorPDU, RejectPDU, AbortPDU
 from .app import Application
 
@@ -9,49 +9,49 @@ _logger = logging.getLogger(__name__)
 __all__ = ['ApplicationIOController']
 
 
-class ApplicationIOController(IOController, Application):
+class ApplicationIOController(IOQController, Application):
     """
     Application IO Controller.
     This IO Controller has queues IO requests so that there is only one request running
     for every unique destination address.
     """
     def __init__(self, *args, **kwargs):
-        IOController.__init__(self)
+        IOQController.__init__(self)
         Application.__init__(self, *args, **kwargs)
-        # queues for each address
-        self.queue_by_address = {}
+        # We have to keep track of all the active IOCBs so that
+        # confirmations can be assigned to the requesting iocb
+        self.active_iocbs = {}
 
     def _process_io(self, iocb: IOCB):
-        # get the destination address from the pdu
-        destination_address = iocb.args[0].pduDestination
-        # look up the queue
-        queue = self.queue_by_address.get(destination_address, None)
-        if not queue:
-            queue = SieveQueue(self, destination_address)
-            self.queue_by_address[destination_address] = queue
-        # ask the queue to process the request
-        queue.request_io(iocb)
+        self.active_io(iocb)
+        self.request(iocb.request)
+
+    def active_io(self, iocb: IOCB):
+        self.active_iocbs[iocb.request.pduDestination] = iocb
+        IOQController.active_io(self, iocb)
+
+    def complete_io(self, iocb: IOCB, msg):
+        self.active_iocbs.pop(iocb.request.pduDestination)
+        IOQController.complete_io(self, iocb, msg)
+
+    def abort_io(self, iocb: IOCB, err: Exception):
+        self.active_iocbs.pop(iocb.request.pduDestination)
+        IOQController.abort_io(self, iocb, err)
 
     def _app_complete(self, address, apdu):
         # look up the queue
-        queue = self.queue_by_address.get(address, None)
-        if not queue:
-            _logger.debug('no queue for %r', address)
-            return
+        iocb = self.active_iocbs.get(address)
         # make sure it has an active iocb
-        if not queue.active_iocb:
-            _logger.debug('no active request for %r', address)
+        if not iocb:
+            _logger.error('no active request for %r %r', address, self.active_iocbs)
             return
         # this request is complete
         if isinstance(apdu, (None.__class__, SimpleAckPDU, ComplexAckPDU)):
-            queue.complete_io(queue.active_iocb, apdu)
+            self.complete_io(iocb, apdu)
         elif isinstance(apdu, (ErrorPDU, RejectPDU, AbortPDU)):
-            queue.abort_io(queue.active_iocb, apdu)
+            self.abort_io(iocb, apdu)
         else:
             raise RuntimeError('unrecognized APDU type')
-        # if the queue is empty and idle, forget about the controller
-        if not queue.io_queue.queue and not queue.active_iocb:
-            del self.queue_by_address[address]
 
     def request(self, apdu):
         # send it downstream
