@@ -8,15 +8,14 @@ import sys
 import struct
 import time
 import re
-
-from .debugging import ModuleLogger, btox
+import logging
+from .debugging import btox
 
 from .errors import DecodingError, InvalidTag, InvalidParameterDatatype
 from .comm import PDUData
 
-# some debugging
 _debug = 0
-_log = ModuleLogger(globals())
+_log = logging.getLogger(__name__)
 
 
 class Tag(object):
@@ -905,7 +904,6 @@ class BitString(Atomic):
                     values.append('!' + bit_names[index])
             else:
                 values.append(str(value))
-
         # bundle it together
         return "BitString(" + ','.join(values) + ")"
 
@@ -980,7 +978,7 @@ class Enumerated(Atomic):
 
     def keylist(self):
         """Return a list of names in order by value."""
-        items = self.enumerations.items()
+        items = list(self.enumerations.items())
         items.sort(lambda a, b: self.cmp(a[1], b[1]))
         # last item has highest value
         rslt = [None] * (items[-1][1] + 1)
@@ -1046,22 +1044,21 @@ class Enumerated(Atomic):
         return "%s(%s)" % (self.__class__.__name__, self.value)
 
 
-def expand_enumerations(klass):
+def expand_enumerations(cls):
     # build a value dictionary
     xlate_table = {}
-    for c in klass.__mro__:
+    for c in cls.__mro__:
         enumerations = getattr(c, 'enumerations', {})
         if enumerations:
             for name, value in enumerations.items():
                 # save the results
                 xlate_table[name] = value
                 xlate_table[value] = name
-
                 # save the name in the class
-                setattr(klass, name, value)
-
+                setattr(cls, name, value)
     # save the dictionary in the class
-    setattr(klass, '_xlate_table', xlate_table)
+    setattr(cls, '_xlate_table', xlate_table)
+    return cls
 
 
 #
@@ -1105,7 +1102,6 @@ class Date(Atomic):
 
     def __init__(self, arg=None, year=255, month=255, day=255, day_of_week=255):
         self.value = (year, month, day, day_of_week)
-
         if arg is None:
             pass
         elif isinstance(arg, Tag):
@@ -1115,19 +1111,16 @@ class Date(Atomic):
         elif isinstance(arg, str):
             # lower case everything
             arg = arg.lower()
-
             # make a list of the contents from matching patterns
             matches = []
             for p in _date_patterns:
                 m = p.match(arg)
                 if m:
                     matches.append(m.groupdict())
-
             # try to find a good one
             match = None
             if not matches:
                 raise ValueError("unmatched")
-
             # if there is only one, success
             if len(matches) == 1:
                 match = matches[0]
@@ -1136,17 +1129,15 @@ class Date(Atomic):
                 for a, b in zip(matches[:-1], matches[1:]):
                     if a != b:
                         raise ValueError("ambiguous")
-                        break
                 else:
                     match = matches[0]
-
             # extract the year and normalize
             year = match['year']
             if (year == '*') or (not year):
                 year = 255
             else:
                 year = int(year)
-                if (year == 255):
+                if year == 255:
                     pass
                 elif year < 35:
                     year += 2000
@@ -1154,29 +1145,26 @@ class Date(Atomic):
                     year += 1900
                 elif year < 1900:
                     raise ValueError("invalid year")
-
             # extract the month and normalize
             month = match['month']
             if month in _special_mon:
                 month = _special_mon[month]
             else:
                 month = int(month)
-                if (month == 255):
+                if month == 255:
                     pass
                 elif (month == 0) or (month > 14):
                     raise ValueError("invalid month")
-
             # extract the day and normalize
             day = match['day']
             if day in _special_day:
                 day = _special_day[day]
             else:
                 day = int(day)
-                if (day == 255):
+                if day == 255:
                     pass
                 elif (day == 0) or (day > 34):
                     raise ValueError("invalid day")
-
             # extract the day-of-week and normalize
             day_of_week = match['dow']
             if day_of_week in _special_dow:
@@ -1185,25 +1173,20 @@ class Date(Atomic):
                 pass
             else:
                 day_of_week = int(day_of_week)
-                if (day_of_week == 255):
+                if day_of_week == 255:
                     pass
                 elif day_of_week > 7:
                     raise ValueError("invalid day of week")
-
             # year becomes the correct octet
             if year != 255:
                 year -= 1900
-
             # save the value
             self.value = (year, month, day, day_of_week)
-
             # calculate the day of the week
             if not day_of_week:
                 self.CalcDayOfWeek()
-
         elif isinstance(arg, Date):
             self.value = arg.value
-
         else:
             raise TypeError("invalid constructor datatype")
 

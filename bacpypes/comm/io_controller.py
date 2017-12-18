@@ -103,7 +103,7 @@ class IOController(object):
             # notify the client
             iocb.trigger()
 
-    def abort_io(self, iocb: IOCB, err: Exception):
+    def abort_io(self, iocb: IOCB, err):
         """
         This method is called by the derived class when the IO processing has
         encountered an error.  The `msg` is put in the `ioError`
@@ -111,7 +111,7 @@ class IOController(object):
         IOController derived classes should call this function rather than
         the `abort()` function of the IOCB.
         :param iocb: the IOCB to be processed
-        :param msg: the error to be returned
+        :param err: the error to be returned
         """
         _logger.debug('abort_io %r %r', iocb, err)
         if iocb.io_state == COMPLETED:

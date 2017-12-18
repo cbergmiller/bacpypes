@@ -34,7 +34,7 @@ class ApplicationIOController(IOQController, Application):
         self.active_iocbs.pop(iocb.request.pduDestination)
         IOQController.complete_io(self, iocb, msg)
 
-    def abort_io(self, iocb: IOCB, err: Exception):
+    def abort_io(self, iocb: IOCB, err):
         self.active_iocbs.pop(iocb.request.pduDestination)
         IOQController.abort_io(self, iocb, err)
 
@@ -63,3 +63,18 @@ class ApplicationIOController(IOQController, Application):
     def confirmation(self, apdu):
         # this is an ack, error, reject or abort
         self._app_complete(apdu.pduSource, apdu)
+
+    async def execute_requests(self, requests):
+        """
+        Execute the given requests and return the result when they are finished.
+        :param requests: iterable of APDU requests
+        :return: List of results (result is None if unconfirmed request)
+        """
+        blocks = []
+        for request in requests:
+            iocb = IOCB(request)
+            self.request_io(iocb)
+            blocks.append(iocb)
+        for iocb in blocks:
+            await iocb.wait()
+        return blocks

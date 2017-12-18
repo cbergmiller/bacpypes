@@ -104,6 +104,8 @@ class _APDU(APDU):
     so that derived classes use the update function to copy the contents
     between PDU's.  Otherwise the APCI content would be decoded twice.
     """
+    def __init__(self, *args, **kwargs):
+        super(_APDU, self).__init__(*args, **kwargs)
 
     def encode(self, pdu):
         APCI.update(pdu, self)
@@ -132,6 +134,7 @@ class _APDU(APDU):
         return f'<{sname}({stype}) instance at {hex(id(self))}>'
 
 
+@register_apdu_type
 class ConfirmedRequestPDU(_APDU):
     """
     ConfirmedRequestPDU
@@ -179,9 +182,7 @@ class ConfirmedRequestPDU(_APDU):
         apci.pduData = pdu.pduData
 
 
-register_apdu_type(ConfirmedRequestPDU)
-
-
+@register_apdu_type
 class UnconfirmedRequestPDU(_APDU):
     """
     UnconfirmedRequestPDU
@@ -208,9 +209,7 @@ class UnconfirmedRequestPDU(_APDU):
         return unconfirmed_request_types[apdu_servive].__name__
 
 
-register_apdu_type(UnconfirmedRequestPDU)
-
-
+@register_apdu_type
 class SimpleAckPDU(_APDU):
     """
     SimpleAckPDU
@@ -243,9 +242,7 @@ class SimpleAckPDU(_APDU):
         return confirmed_request_types[apdu_servive].__name__
 
 
-register_apdu_type(SimpleAckPDU)
-
-
+@register_apdu_type
 class ComplexAckPDU(_APDU):
     """
     ComplexAckPDU
@@ -293,9 +290,7 @@ class ComplexAckPDU(_APDU):
         return confirmed_request_types[apdu_servive].__name__
 
 
-register_apdu_type(ComplexAckPDU)
-
-
+@register_apdu_type
 class SegmentAckPDU(_APDU):
     """
     SegmentAckPDU
@@ -337,9 +332,7 @@ class SegmentAckPDU(_APDU):
         return confirmed_request_types[apdu_servive].__name__
 
 
-register_apdu_type(SegmentAckPDU)
-
-
+@register_apdu_type
 class ErrorPDU(_APDU):
     """
     ErrorPDU
@@ -374,9 +367,7 @@ class ErrorPDU(_APDU):
         return error_types[apdu_servive].__name__
 
 
-register_apdu_type(ErrorPDU)
-
-
+@expand_enumerations
 class RejectReason(Enumerated):
     """
     RejectPDU
@@ -396,9 +387,7 @@ class RejectReason(Enumerated):
     }
 
 
-expand_enumerations(RejectReason)
-
-
+@register_apdu_type
 class RejectPDU(_APDU):
     pduType = 6
 
@@ -425,9 +414,7 @@ class RejectPDU(_APDU):
         apci.apduAbortRejectReason = pdu.get()
 
 
-register_apdu_type(RejectPDU)
-
-
+@expand_enumerations
 class AbortReason(Enumerated):
     """
     AbortPDU
@@ -451,9 +438,7 @@ class AbortReason(Enumerated):
     }
 
 
-expand_enumerations(AbortReason)
-
-
+@register_apdu_type
 class AbortPDU(_APDU):
     pduType = 7
 
@@ -497,9 +482,6 @@ class AbortPDU(_APDU):
         except Exception:
             reason = str(self.apduAbortRejectReason) + '?'
         return reason
-
-
-register_apdu_type(AbortPDU)
 
 
 class APCISequence(APCI, Sequence):
@@ -658,6 +640,7 @@ class VTCloseError(ErrorSequence):
 error_types[22] = VTCloseError
 
 
+@register_confirmed_request_type
 class ReadPropertyRequest(ConfirmedRequestSequence):
     serviceChoice = 12
     sequenceElements = [
@@ -667,9 +650,7 @@ class ReadPropertyRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(ReadPropertyRequest)
-
-
+@register_complex_ack_type
 class ReadPropertyACK(ComplexAckSequence):
     serviceChoice = 12
     sequenceElements = [
@@ -680,9 +661,6 @@ class ReadPropertyACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(ReadPropertyACK)
-
-
 class ReadAccessSpecification(Sequence):
     sequenceElements = [
         Element('objectIdentifier', ObjectIdentifier, 0),
@@ -690,14 +668,12 @@ class ReadAccessSpecification(Sequence):
     ]
 
 
+@register_confirmed_request_type
 class ReadPropertyMultipleRequest(ConfirmedRequestSequence):
     serviceChoice = 14
     sequenceElements = [
         Element('listOfReadAccessSpecs', SequenceOf(ReadAccessSpecification)),
     ]
-
-
-register_confirmed_request_type(ReadPropertyMultipleRequest)
 
 
 class ReadAccessResultElementChoice(Choice):
@@ -722,14 +698,12 @@ class ReadAccessResult(Sequence):
     ]
 
 
+@register_complex_ack_type
 class ReadPropertyMultipleACK(ComplexAckSequence):
     serviceChoice = 14
     sequenceElements = [
         Element('listOfReadAccessResults', SequenceOf(ReadAccessResult)),
     ]
-
-
-register_complex_ack_type(ReadPropertyMultipleACK)
 
 
 class RangeByPosition(Sequence):
@@ -761,6 +735,7 @@ class Range(Choice):
     ]
 
 
+@register_confirmed_request_type
 class ReadRangeRequest(ConfirmedRequestSequence):
     serviceChoice = 26
     sequenceElements = [
@@ -771,9 +746,7 @@ class ReadRangeRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(ReadRangeRequest)
-
-
+@register_complex_ack_type
 class ReadRangeACK(ComplexAckSequence):
     serviceChoice = 26
     sequenceElements = [
@@ -787,9 +760,7 @@ class ReadRangeACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(ReadRangeACK)
-
-
+@register_confirmed_request_type
 class WritePropertyRequest(ConfirmedRequestSequence):
     serviceChoice = 15
     sequenceElements = [
@@ -801,9 +772,6 @@ class WritePropertyRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(WritePropertyRequest)
-
-
 class WriteAccessSpecification(Sequence):
     sequenceElements = [
         Element('objectIdentifier', ObjectIdentifier, 0),
@@ -811,14 +779,12 @@ class WriteAccessSpecification(Sequence):
     ]
 
 
+@register_confirmed_request_type
 class WritePropertyMultipleRequest(ConfirmedRequestSequence):
     serviceChoice = 16
     sequenceElements = [
         Element('listOfWriteAccessSpecs', SequenceOf(WriteAccessSpecification)),
     ]
-
-
-register_confirmed_request_type(WritePropertyMultipleRequest)
 
 
 class GroupChannelValue(Sequence):
@@ -829,6 +795,7 @@ class GroupChannelValue(Sequence):
     ]
 
 
+@register_unconfirmed_request_type
 class WriteGroupRequest(UnconfirmedRequestSequence):
     serviceChoice = 10
     sequenceElements = [
@@ -839,9 +806,7 @@ class WriteGroupRequest(UnconfirmedRequestSequence):
     ]
 
 
-register_unconfirmed_request_type(WriteGroupRequest)
-
-
+@register_unconfirmed_request_type
 class IAmRequest(UnconfirmedRequestSequence):
     serviceChoice = 0
     sequenceElements = [
@@ -852,9 +817,7 @@ class IAmRequest(UnconfirmedRequestSequence):
     ]
 
 
-register_unconfirmed_request_type(IAmRequest)
-
-
+@register_unconfirmed_request_type
 class IHaveRequest(UnconfirmedRequestSequence):
     serviceChoice = 1
     sequenceElements = [
@@ -862,9 +825,6 @@ class IHaveRequest(UnconfirmedRequestSequence):
         Element('objectIdentifier', ObjectIdentifier),
         Element('objectName', CharacterString),
     ]
-
-
-register_unconfirmed_request_type(IHaveRequest)
 
 
 class WhoHasLimits(Sequence):
@@ -881,6 +841,7 @@ class WhoHasObject(Choice):
     ]
 
 
+@register_unconfirmed_request_type
 class WhoHasRequest(UnconfirmedRequestSequence):
     serviceChoice = 7
     sequenceElements = [
@@ -889,18 +850,13 @@ class WhoHasRequest(UnconfirmedRequestSequence):
     ]
 
 
-register_unconfirmed_request_type(WhoHasRequest)
-
-
+@register_unconfirmed_request_type
 class WhoIsRequest(UnconfirmedRequestSequence):
     serviceChoice = 8
     sequenceElements = [
         Element('deviceInstanceRangeLowLimit', Unsigned, 0, True),
         Element('deviceInstanceRangeHighLimit', Unsigned, 1, True),
     ]
-
-
-register_unconfirmed_request_type(WhoIsRequest)
 
 
 class EventNotificationParameters(Sequence):
@@ -921,20 +877,16 @@ class EventNotificationParameters(Sequence):
     ]
 
 
+@register_confirmed_request_type
 class ConfirmedEventNotificationRequest(ConfirmedRequestSequence):
     serviceChoice = 2
     sequenceElements = EventNotificationParameters.sequenceElements
 
 
-register_confirmed_request_type(ConfirmedEventNotificationRequest)
-
-
+@register_unconfirmed_request_type
 class UnconfirmedEventNotificationRequest(UnconfirmedRequestSequence):
     serviceChoice = 3
     sequenceElements = EventNotificationParameters.sequenceElements
-
-
-register_unconfirmed_request_type(UnconfirmedEventNotificationRequest)
 
 
 class COVNotificationParameters(Sequence):
@@ -947,22 +899,19 @@ class COVNotificationParameters(Sequence):
     ]
 
 
+@register_confirmed_request_type
 class ConfirmedCOVNotificationRequest(ConfirmedRequestSequence):
     serviceChoice = 1
     sequenceElements = COVNotificationParameters.sequenceElements
 
 
-register_confirmed_request_type(ConfirmedCOVNotificationRequest)
-
-
+@register_unconfirmed_request_type
 class UnconfirmedCOVNotificationRequest(UnconfirmedRequestSequence):
     serviceChoice = 2
     sequenceElements = COVNotificationParameters.sequenceElements
 
 
-register_unconfirmed_request_type(UnconfirmedCOVNotificationRequest)
-
-
+@register_unconfirmed_request_type
 class UnconfirmedPrivateTransferRequest(UnconfirmedRequestSequence):
     serviceChoice = 4
     sequenceElements = [
@@ -970,9 +919,6 @@ class UnconfirmedPrivateTransferRequest(UnconfirmedRequestSequence):
         Element('serviceNumber', Unsigned, 1),
         Element('serviceParameters', Any, 2, True),
     ]
-
-
-register_unconfirmed_request_type(UnconfirmedPrivateTransferRequest)
 
 
 class UnconfirmedTextMessageRequestMessageClass(Choice):
@@ -989,6 +935,7 @@ class UnconfirmedTextMessageRequestMessagePriority(Enumerated):
     }
 
 
+@register_unconfirmed_request_type
 class UnconfirmedTextMessageRequest(UnconfirmedRequestSequence):
     serviceChoice = 5
     sequenceElements = [
@@ -999,9 +946,7 @@ class UnconfirmedTextMessageRequest(UnconfirmedRequestSequence):
     ]
 
 
-register_unconfirmed_request_type(UnconfirmedTextMessageRequest)
-
-
+@register_unconfirmed_request_type
 class TimeSynchronizationRequest(UnconfirmedRequestSequence):
     serviceChoice = 6
     sequenceElements = [
@@ -1009,9 +954,7 @@ class TimeSynchronizationRequest(UnconfirmedRequestSequence):
     ]
 
 
-register_unconfirmed_request_type(TimeSynchronizationRequest)
-
-
+@register_unconfirmed_request_type
 class UTCTimeSynchronizationRequest(UnconfirmedRequestSequence):
     serviceChoice = 9
     sequenceElements = [
@@ -1019,9 +962,7 @@ class UTCTimeSynchronizationRequest(UnconfirmedRequestSequence):
     ]
 
 
-register_unconfirmed_request_type(UTCTimeSynchronizationRequest)
-
-
+@register_confirmed_request_type
 class AcknowledgeAlarmRequest(ConfirmedRequestSequence):
     serviceChoice = 0
     sequenceElements = [
@@ -1034,17 +975,10 @@ class AcknowledgeAlarmRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(AcknowledgeAlarmRequest)
-
-
+@register_confirmed_request_type
 class GetAlarmSummaryRequest(ConfirmedRequestSequence):
     serviceChoice = 3
-    sequenceElements = \
-        [
-        ]
-
-
-register_confirmed_request_type(GetAlarmSummaryRequest)
+    sequenceElements = []
 
 
 class GetAlarmSummaryAlarmSummary(Sequence):
@@ -1055,14 +989,12 @@ class GetAlarmSummaryAlarmSummary(Sequence):
     ]
 
 
+@register_complex_ack_type
 class GetAlarmSummaryACK(ComplexAckSequence):
     serviceChoice = 3
     sequenceElements = [
         Element('listOfAlarmSummaries', SequenceOf(GetAlarmSummaryAlarmSummary)),
     ]
-
-
-register_complex_ack_type(GetAlarmSummaryACK)
 
 
 class GetEnrollmentSummaryRequestAcknowledgmentFilterType(Enumerated):
@@ -1090,6 +1022,7 @@ class GetEnrollmentSummaryRequestPriorityFilterType:
     ]
 
 
+@register_confirmed_request_type
 class GetEnrollmentSummaryRequest(ConfirmedRequestSequence):
     serviceChoice = 4
     sequenceElements = [
@@ -1102,9 +1035,6 @@ class GetEnrollmentSummaryRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(GetEnrollmentSummaryRequest)
-
-
 class GetEnrollmentSummaryEnrollmentSummary(Sequence):
     sequenceElements = [
         Element('objectIdentifier', ObjectIdentifier),
@@ -1115,6 +1045,7 @@ class GetEnrollmentSummaryEnrollmentSummary(Sequence):
     ]
 
 
+@register_complex_ack_type
 class GetEnrollmentSummaryACK(ComplexAckSequence):
     serviceChoice = 4
     sequenceElements = [
@@ -1122,17 +1053,12 @@ class GetEnrollmentSummaryACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(GetEnrollmentSummaryACK)
-
-
+@register_confirmed_request_type
 class GetEventInformationRequest(ConfirmedRequestSequence):
     serviceChoice = 29
     sequenceElements = [
         Element('lastReceivedObjectIdentifier', ObjectIdentifier, 0, True),
     ]
-
-
-register_confirmed_request_type(GetEventInformationRequest)
 
 
 class GetEventInformationEventSummary(Sequence):
@@ -1147,6 +1073,7 @@ class GetEventInformationEventSummary(Sequence):
     ]
 
 
+@register_complex_ack_type
 class GetEventInformationACK(ComplexAckSequence):
     serviceChoice = 29
     sequenceElements = [
@@ -1155,9 +1082,7 @@ class GetEventInformationACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(GetEventInformationACK)
-
-
+@register_confirmed_request_type
 class LifeSafetyOperationRequest(ConfirmedRequestSequence):
     serviceChoice = 27
     sequenceElements = [
@@ -1168,9 +1093,7 @@ class LifeSafetyOperationRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(LifeSafetyOperationRequest)
-
-
+@register_confirmed_request_type
 class SubscribeCOVRequest(ConfirmedRequestSequence):
     serviceChoice = 5
     sequenceElements = [
@@ -1181,9 +1104,7 @@ class SubscribeCOVRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(SubscribeCOVRequest)
-
-
+@register_confirmed_request_type
 class SubscribeCOVPropertyRequest(ConfirmedRequestSequence):
     serviceChoice = 28
     sequenceElements = [
@@ -1194,9 +1115,6 @@ class SubscribeCOVPropertyRequest(ConfirmedRequestSequence):
         Element('monitoredPropertyIdentifier', PropertyReference, 4),
         Element('covIncrement', Real, 5, True),
     ]
-
-
-register_confirmed_request_type(SubscribeCOVPropertyRequest)
 
 
 class AtomicReadFileRequestAccessMethodChoiceStreamAccess(Sequence):
@@ -1220,15 +1138,13 @@ class AtomicReadFileRequestAccessMethodChoice(Choice):
     ]
 
 
+@register_confirmed_request_type
 class AtomicReadFileRequest(ConfirmedRequestSequence):
     serviceChoice = 6
     sequenceElements = [
         Element('fileIdentifier', ObjectIdentifier),
         Element('accessMethod', AtomicReadFileRequestAccessMethodChoice),
     ]
-
-
-register_confirmed_request_type(AtomicReadFileRequest)
 
 
 class AtomicReadFileACKAccessMethodStreamAccess(Sequence):
@@ -1253,15 +1169,13 @@ class AtomicReadFileACKAccessMethodChoice(Choice):
     ]
 
 
+@register_complex_ack_type
 class AtomicReadFileACK(ComplexAckSequence):
     serviceChoice = 6
     sequenceElements = [
         Element('endOfFile', Boolean),
         Element('accessMethod', AtomicReadFileACKAccessMethodChoice),
     ]
-
-
-register_complex_ack_type(AtomicReadFileACK)
 
 
 class AtomicWriteFileRequestAccessMethodChoiceStreamAccess(Sequence):
@@ -1286,6 +1200,7 @@ class AtomicWriteFileRequestAccessMethodChoice(Choice):
     ]
 
 
+@register_confirmed_request_type
 class AtomicWriteFileRequest(ConfirmedRequestSequence):
     serviceChoice = 7
     sequenceElements = [
@@ -1294,9 +1209,7 @@ class AtomicWriteFileRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(AtomicWriteFileRequest)
-
-
+@register_complex_ack_type
 class AtomicWriteFileACK(ComplexAckSequence):
     serviceChoice = 7
     sequenceElements = [
@@ -1305,9 +1218,7 @@ class AtomicWriteFileACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(AtomicWriteFileACK)
-
-
+@register_confirmed_request_type
 class AddListElementRequest(ConfirmedRequestSequence):
     serviceChoice = 8
     sequenceElements = [
@@ -1318,9 +1229,6 @@ class AddListElementRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(AddListElementRequest)
-
-
 class CreateObjectRequestObjectSpecifier(Choice):
     choiceElements = [
         Element('objectType', ObjectType, 0),
@@ -1328,6 +1236,7 @@ class CreateObjectRequestObjectSpecifier(Choice):
     ]
 
 
+@register_confirmed_request_type
 class CreateObjectRequest(ConfirmedRequestSequence):
     serviceChoice = 10
     sequenceElements = [
@@ -1336,9 +1245,7 @@ class CreateObjectRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(CreateObjectRequest)
-
-
+@register_complex_ack_type
 class CreateObjectACK(ComplexAckSequence):
     serviceChoice = 10
     sequenceElements = [
@@ -1346,9 +1253,7 @@ class CreateObjectACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(CreateObjectACK)
-
-
+@register_confirmed_request_type
 class DeleteObjectRequest(ConfirmedRequestSequence):
     serviceChoice = 11
     sequenceElements = [
@@ -1356,9 +1261,7 @@ class DeleteObjectRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(DeleteObjectRequest)
-
-
+@register_confirmed_request_type
 class RemoveListElementRequest(ConfirmedRequestSequence):
     serviceChoice = 9
     sequenceElements = [
@@ -1369,9 +1272,6 @@ class RemoveListElementRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(RemoveListElementRequest)
-
-
 class DeviceCommunicationControlRequestEnableDisable(Enumerated):
     enumerations = {
         'enable': 0,
@@ -1380,6 +1280,7 @@ class DeviceCommunicationControlRequestEnableDisable(Enumerated):
     }
 
 
+@register_confirmed_request_type
 class DeviceCommunicationControlRequest(ConfirmedRequestSequence):
     serviceChoice = 17
     sequenceElements = [
@@ -1389,9 +1290,7 @@ class DeviceCommunicationControlRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(DeviceCommunicationControlRequest)
-
-
+@register_confirmed_request_type
 class ConfirmedPrivateTransferRequest(ConfirmedRequestSequence):
     serviceChoice = 18
     sequenceElements = [
@@ -1401,9 +1300,7 @@ class ConfirmedPrivateTransferRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(ConfirmedPrivateTransferRequest)
-
-
+@register_complex_ack_type
 class ConfirmedPrivateTransferACK(ComplexAckSequence):
     serviceChoice = 18
     sequenceElements = [
@@ -1411,9 +1308,6 @@ class ConfirmedPrivateTransferACK(ComplexAckSequence):
         Element('serviceNumber', Unsigned, 1),
         Element('resultBlock', Any, 2, True),
     ]
-
-
-register_complex_ack_type(ConfirmedPrivateTransferACK)
 
 
 class ConfirmedTextMessageRequestMessageClass(Choice):
@@ -1430,6 +1324,7 @@ class ConfirmedTextMessageRequestMessagePriority(Enumerated):
     }
 
 
+@register_confirmed_request_type
 class ConfirmedTextMessageRequest(ConfirmedRequestSequence):
     serviceChoice = 19
     sequenceElements = [
@@ -1438,9 +1333,6 @@ class ConfirmedTextMessageRequest(ConfirmedRequestSequence):
         Element('messagePriority', ConfirmedTextMessageRequestMessagePriority, 2),
         Element('message', CharacterString, 3),
     ]
-
-
-register_confirmed_request_type(ConfirmedTextMessageRequest)
 
 
 class ReinitializeDeviceRequestReinitializedStateOfDevice(Enumerated):
@@ -1455,6 +1347,7 @@ class ReinitializeDeviceRequestReinitializedStateOfDevice(Enumerated):
     }
 
 
+@register_confirmed_request_type
 class ReinitializeDeviceRequest(ConfirmedRequestSequence):
     serviceChoice = 20
     sequenceElements = [
@@ -1463,9 +1356,7 @@ class ReinitializeDeviceRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(ReinitializeDeviceRequest)
-
-
+@register_confirmed_request_type
 class VTOpenRequest(ConfirmedRequestSequence):
     serviceChoice = 21
     sequenceElements = [
@@ -1474,9 +1365,7 @@ class VTOpenRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(VTOpenRequest)
-
-
+@register_complex_ack_type
 class VTOpenACK(ComplexAckSequence):
     serviceChoice = 21
     sequenceElements = [
@@ -1484,9 +1373,7 @@ class VTOpenACK(ComplexAckSequence):
     ]
 
 
-register_complex_ack_type(VTOpenACK)
-
-
+@register_confirmed_request_type
 class VTCloseRequest(ConfirmedRequestSequence):
     serviceChoice = 22
     sequenceElements = [
@@ -1494,9 +1381,7 @@ class VTCloseRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(VTCloseRequest)
-
-
+@register_confirmed_request_type
 class VTDataRequest(ConfirmedRequestSequence):
     serviceChoice = 23
     sequenceElements = [
@@ -1506,18 +1391,13 @@ class VTDataRequest(ConfirmedRequestSequence):
     ]
 
 
-register_confirmed_request_type(VTDataRequest)
-
-
+@register_complex_ack_type
 class VTDataACK(ComplexAckSequence):
     serviceChoice = 23
     sequenceElements = [
         Element('allNewDataAccepted', Boolean, 0),
         Element('acceptedOctetCount', Unsigned, 1),
     ]
-
-
-register_complex_ack_type(VTDataACK)
 
 
 # removed in version 1, revision 11
@@ -1551,6 +1431,7 @@ class RequestKeyRequest(ConfirmedRequestSequence):
     ]
 
 
+@expand_enumerations
 class ConfirmedServiceChoice(Enumerated):
     enumerations = {
         # Alarm and Event Services
@@ -1588,9 +1469,7 @@ class ConfirmedServiceChoice(Enumerated):
     }
 
 
-expand_enumerations(ConfirmedServiceChoice)
-
-
+@expand_enumerations
 class UnconfirmedServiceChoice(Enumerated):
     enumerations = {
         'iAm': 0,
@@ -1605,6 +1484,3 @@ class UnconfirmedServiceChoice(Enumerated):
         'utcTimeSynchronization': 9,
         'writeGroup': 10,
     }
-
-
-expand_enumerations(UnconfirmedServiceChoice)

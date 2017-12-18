@@ -11,7 +11,6 @@ from ..link import Address
 from ..primitivedata import ObjectIdentifier
 from ..apdu import UnconfirmedRequestPDU, ConfirmedRequestPDU, Error
 from ..errors import ExecutionError, UnrecognizedService, AbortException, RejectException
-# for computing protocol services supported
 from ..apdu import confirmed_request_types, unconfirmed_request_types, \
     ConfirmedServiceChoice, UnconfirmedServiceChoice
 from ..basetypes import ServicesSupported
@@ -120,14 +119,12 @@ class Application(ApplicationServiceElement, Collector):
             if hasattr(self, service_helper):
                 service_supported = ConfirmedServiceChoice._xlate_table[service_choice]
                 services_supported[service_supported] = 1
-
         # look through the unconfirmed services
         for service_choice, service_request_class in unconfirmed_request_types.items():
             service_helper = f'do_{service_request_class.__name__}'
             if hasattr(self, service_helper):
                 service_supported = UnconfirmedServiceChoice._xlate_table[service_choice]
                 services_supported[service_supported] = 1
-
         # return the bit list
         return services_supported
 
@@ -158,7 +155,7 @@ class Application(ApplicationServiceElement, Collector):
                 resp = Error(errorClass=err.errorClass, errorCode=err.errorCode, context=apdu)
                 self.response(resp)
         except Exception as err:
-            _logger.exception("exception: %r", err)
+            _logger.exception('exception: %r', err)
             # send back an error
             if isinstance(apdu, ConfirmedRequestPDU):
                 resp = Error(errorClass='device', errorCode='operationalProblem', context=apdu)

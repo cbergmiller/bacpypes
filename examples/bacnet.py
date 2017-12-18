@@ -24,7 +24,7 @@ from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
-_logger.setLevel(logging.INFO)
+_logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
@@ -49,20 +49,14 @@ class ReadPointListApplication(BIPSimpleApplication):
 
     async def do_device_request(self, device_id, addr):
         _logger.debug(f'    - do_device_request: {device_id} {addr}')
-        iocbs = []
-        for property_id in ['objectName',  'modelName', 'vendorName', 'serialNumber', 'objectList']:
-            request = ReadPropertyRequest(
+        blocks = await self.execute_requests(
+            ReadPropertyRequest(
                 objectIdentifier=('device', device_id),
                 propertyIdentifier=property_id,
-            )
-            request.pduDestination = Address(addr)
-            _logger.debug(f'request: {request}')
-            iocb = IOCB(request)
-            self.request_io(iocb)
-            iocbs.append(iocb)
-        for iocb in iocbs:
-            await iocb.wait()
-        for iocb in iocbs:
+                destination=Address(addr)
+            ) for property_id in ['objectName', 'modelName', 'vendorName', 'serialNumber', 'objectList']
+        )
+        for iocb in blocks:
             self.complete_device_request(iocb)
 
     def complete_device_request(self, iocb):

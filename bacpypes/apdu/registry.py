@@ -13,19 +13,24 @@ error_types = {}
 
 def register_apdu_type(cls):
     apdu_types[cls.pduType] = cls
+    return cls
 
 
 def register_confirmed_request_type(cls):
     confirmed_request_types[cls.serviceChoice] = cls
+    return cls
 
 
 def register_complex_ack_type(cls):
     complex_ack_types[cls.serviceChoice] = cls
+    return cls
 
 
 def register_unconfirmed_request_type(cls):
     unconfirmed_request_types[cls.serviceChoice] = cls
+    return cls
 
 
 def register_error_type(cls):
     error_types[cls.serviceChoice] = cls
+    return cls
