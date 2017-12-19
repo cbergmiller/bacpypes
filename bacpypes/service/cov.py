@@ -11,15 +11,19 @@ from ..task import call_later
 from ..basetypes import DeviceAddress, COVSubscription, PropertyValue, \
     Recipient, RecipientProcess, ObjectPropertyReference
 from ..constructeddata import SequenceOf, Any
-from ..apdu import ConfirmedCOVNotificationRequest, \
-    UnconfirmedCOVNotificationRequest, \
-    SimpleAckPDU, Error, RejectPDU, AbortPDU
+from ..apdu import ConfirmedCOVNotificationRequest, UnconfirmedCOVNotificationRequest, SimpleAckPDU, Error, RejectPDU, \
+    AbortPDU
 from ..errors import ExecutionError
 
 from ..object import Property
 from .detect import DetectionAlgorithm, monitor_filter
 
 _logger = logging.getLogger(__name__)
+__all__ = [
+    'SubscriptionList', 'Subscription', 'COVDetection', 'GenericCriteria', 'COVIncrementCriteria', 'AccessDoorCriteria',
+    'AccessPointCriteria', 'CredentialDataInputCriteria', 'LoadControlCriteria', 'PulseConverterCriteria',
+    'ActiveCOVSubscriptions', 'ChangeOfValueServices'
+]
 
 
 class SubscriptionList:
@@ -40,8 +44,8 @@ class SubscriptionList:
         _logger.debug('find %r %r %r', client_addr, proc_id, obj_id)
         for cov in self.cov_subscriptions:
             all_equal = (cov.client_addr == client_addr) and \
-                (cov.proc_id == proc_id) and \
-                (cov.obj_id == obj_id)
+                        (cov.proc_id == proc_id) and \
+                        (cov.obj_id == obj_id)
             _logger.debug('    - cov, all_equal: %r %r', cov, all_equal)
             if all_equal:
                 return cov
@@ -58,7 +62,6 @@ class SubscriptionList:
 
 
 class Subscription(DebugContents):
-
     _debug_contents = (
         'obj_ref',
         'client_addr',
@@ -66,7 +69,7 @@ class Subscription(DebugContents):
         'obj_id',
         'confirmed',
         'lifetime',
-        )
+    )
 
     def __init__(self, obj_ref, client_addr, proc_id, obj_id, confirmed, lifetime):
         _logger.debug("__init__ %r %r %r %r %r %r", obj_ref, client_addr, proc_id, obj_id, confirmed, lifetime)
@@ -108,7 +111,6 @@ class Subscription(DebugContents):
 
 
 class COVDetection(DetectionAlgorithm):
-
     properties_tracked = ()
     properties_reported = ()
     monitored_property_reference = None
@@ -155,7 +157,7 @@ class COVDetection(DetectionAlgorithm):
             property_value = PropertyValue(
                 propertyIdentifier=property_name,
                 value=Any(bundle_value),
-                )
+            )
             # add it to the list
             list_of_values.append(property_value)
         _logger.debug("    - list_of_values: %r", list_of_values)
@@ -191,29 +193,27 @@ class COVDetection(DetectionAlgorithm):
 
 
 class GenericCriteria(COVDetection):
-
     properties_tracked = (
         'presentValue',
         'statusFlags',
-        )
+    )
     properties_reported = (
         'presentValue',
         'statusFlags',
-        )
+    )
     monitored_property_reference = 'presentValue'
 
 
 class COVIncrementCriteria(COVDetection):
-
     properties_tracked = (
         'presentValue',
         'statusFlags',
         'covIncrement',
-        )
+    )
     properties_reported = (
         'presentValue',
         'statusFlags',
-        )
+    )
     monitored_property_reference = 'presentValue'
 
     def __init__(self, obj):
@@ -231,7 +231,7 @@ class COVIncrementCriteria(COVDetection):
             self.previous_reported_value = old_value
         # see if it changed enough to trigger reporting
         value_changed = (new_value <= (self.previous_reported_value - self.covIncrement)) \
-            or (new_value >= (self.previous_reported_value + self.covIncrement))
+                        or (new_value >= (self.previous_reported_value + self.covIncrement))
         _logger.debug("    - value significantly changed: %r", value_changed)
         return value_changed
 
@@ -244,25 +244,23 @@ class COVIncrementCriteria(COVDetection):
 
 
 class AccessDoorCriteria(COVDetection):
-
     properties_tracked = (
         'presentValue',
         'statusFlags',
         'doorAlarmState',
-        )
+    )
     properties_reported = (
         'presentValue',
         'statusFlags',
         'doorAlarmState',
-        )
+    )
 
 
 class AccessPointCriteria(COVDetection):
-
     properties_tracked = (
         'accessEventTime',
         'statusFlags',
-        )
+    )
     properties_reported = (
         'accessEvent',
         'statusFlags',
@@ -270,25 +268,23 @@ class AccessPointCriteria(COVDetection):
         'accessEventTime',
         'accessEventCredential',
         'accessEventAuthenticationFactor',
-        )
+    )
     monitored_property_reference = 'accessEvent'
 
 
 class CredentialDataInputCriteria(COVDetection):
-
     properties_tracked = (
         'updateTime',
         'statusFlags'
-        )
+    )
     properties_reported = (
         'presentValue',
         'statusFlags',
         'updateTime',
-        )
+    )
 
 
 class LoadControlCriteria(COVDetection):
-
     properties_tracked = (
         'presentValue',
         'statusFlags',
@@ -296,7 +292,7 @@ class LoadControlCriteria(COVDetection):
         'startTime',
         'shedDuration',
         'dutyWindow',
-        )
+    )
     properties_reported = (
         'presentValue',
         'statusFlags',
@@ -304,19 +300,18 @@ class LoadControlCriteria(COVDetection):
         'startTime',
         'shedDuration',
         'dutyWindow',
-        )
+    )
 
 
 class PulseConverterCriteria(COVDetection):
-
     properties_tracked = (
         'presentValue',
         'statusFlags',
-        )
+    )
     properties_reported = (
         'presentValue',
         'statusFlags',
-        )
+    )
 
 
 # mapping from object type to appropriate criteria class
@@ -348,7 +343,7 @@ criteria_type_map = {
     'credentialDataInput': CredentialDataInputCriteria,
     'loadControl': LoadControlCriteria,
     'pulseConverter': PulseConverterCriteria,
-    }
+}
 
 
 class ActiveCOVSubscriptions(Property):
@@ -357,7 +352,7 @@ class ActiveCOVSubscriptions(Property):
         Property.__init__(
             self, 'activeCovSubscriptions', SequenceOf(COVSubscription),
             default=None, optional=True, mutable=False,
-            )
+        )
 
     def ReadProperty(self, obj, arrayIndex=None):
         _logger.debug("ReadProperty %s arrayIndex=%r", obj, arrayIndex)
@@ -381,24 +376,24 @@ class ActiveCOVSubscriptions(Property):
                     address=DeviceAddress(
                         networkNumber=cov.client_addr.addrNet or 0,
                         macAddress=cov.client_addr.addrAddr,
-                        ),
-                    )
+                    ),
+                )
                 _logger.debug("    - recipient: %r", recipient)
                 _logger.debug("    - client MAC address: %r", cov.client_addr.addrAddr)
                 recipient_process = RecipientProcess(
                     recipient=recipient,
                     processIdentifier=cov.proc_id,
-                    )
+                )
                 _logger.debug("    - recipient_process: %r", recipient_process)
                 cov_subscription = COVSubscription(
                     recipient=recipient_process,
                     monitoredPropertyReference=ObjectPropertyReference(
                         objectIdentifier=cov.obj_id,
                         propertyIdentifier=cov_detection.monitored_property_reference,
-                        ),
+                    ),
                     issueConfirmedNotifications=cov.confirmed,
                     timeRemaining=time_remaining,
-                    )
+                )
                 if hasattr(cov_detection, 'covIncrement'):
                     cov_subscription.covIncrement = cov_detection.covIncrement
                 _logger.debug("    - cov_subscription: %r", cov_subscription)

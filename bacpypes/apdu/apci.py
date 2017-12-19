@@ -9,7 +9,7 @@ __all__ = ['APCI']
 
 class APCI(PCI):
     """
-    Application protocol-control information
+    Application Layer Protcol Control Information
     """
     _debug_contents = (
         'apduType', 'apduSeg', 'apduMor', 'apduSA', 'apduSrv', 'apduNak', 'apduSeq', 'apduWin', 'apduMaxSegs',

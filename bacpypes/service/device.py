@@ -14,6 +14,10 @@ from ..task import call_later
 from .object import CurrentPropertyListMixIn
 
 _logger = logging.getLogger(__name__)
+__all__ = [
+    'CurrentDateProperty', 'CurrentTimeProperty', 'LocalDeviceObject', 'WhoIsIAmServices', 'WhoHasIHaveServices',
+    'DeviceCommunicationControlServices',
+]
 
 
 class CurrentDateProperty(Property):
@@ -53,20 +57,19 @@ class CurrentTimeProperty(Property):
 
 
 class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
-
     properties = \
-        [ CurrentTimeProperty('localTime')
-        , CurrentDateProperty('localDate')
-        ]
+        [CurrentTimeProperty('localTime')
+            , CurrentDateProperty('localDate')
+         ]
 
     defaultProperties = \
-        { 'maxApduLengthAccepted': 1024
-        , 'segmentationSupported': 'segmentedBoth'
-        , 'maxSegmentsAccepted': 16
-        , 'apduSegmentTimeout': 5000
-        , 'apduTimeout': 3000
-        , 'numberOfApduRetries': 3
-        }
+        {'maxApduLengthAccepted': 1024
+            , 'segmentationSupported': 'segmentedBoth'
+            , 'maxSegmentsAccepted': 16
+            , 'apduSegmentTimeout': 5000
+            , 'apduTimeout': 3000
+            , 'numberOfApduRetries': 3
+         }
 
     def __init__(self, **kwargs):
         _logger.debug("__init__ %r", kwargs)
@@ -97,7 +100,7 @@ class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
         else:
             kwargs['objectList'] = ArrayOf(ObjectIdentifier)([
                 kwargs['objectIdentifier'],
-                ])
+            ])
         # check for a minimum value
         if kwargs['maxApduLengthAccepted'] < 50:
             raise ValueError("invalid max APDU length accepted")
@@ -186,7 +189,7 @@ class WhoIsIAmServices(Capability):
             maxAPDULengthAccepted=self.localDevice.maxApduLengthAccepted,
             segmentationSupported=self.localDevice.segmentationSupported,
             vendorID=self.localDevice.vendorIdentifier,
-            )
+        )
         # defaults to a global broadcast
         if not address:
             address = GlobalBroadcast()
@@ -277,7 +280,7 @@ class WhoHasIHaveServices(Capability):
             deviceIdentifier=self.localDevice.objectIdentifier,
             objectIdentifier=thing.objectIdentifier,
             objectName=thing.objectName,
-            )
+        )
         # defaults to a global broadcast
         if not address:
             address = GlobalBroadcast()
@@ -341,4 +344,3 @@ class DeviceCommunicationControlServices(Capability):
         if self._dcc_enable_handle:
             self._dcc_enable_handle.suspend_task()
             self._dcc_enable_handle = None
-

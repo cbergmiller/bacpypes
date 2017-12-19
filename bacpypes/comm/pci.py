@@ -8,7 +8,10 @@ __all__ = ['PCI']
 
 class PCI:
     """
-    PCI
+    Protcol Control Information
+    (PCI) - information about addressing, processing instructions
+    Protocol Control Information is generally the context information and/or
+    other types of processing instructions.
     """
     _debug_contents = ('pduUserData+', 'pduSource', 'pduDestination')
 

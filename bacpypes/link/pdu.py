@@ -24,7 +24,7 @@ __all__ = ['PDU']
 
 class PDU(PCI, PDUData):
     """
-    Link Layer PDU
+    Link Layer BACnet Protocol Data Units
     """
     def __init__(self, *args, **kwargs):
         if DEBUG: _logger.debug('PDU.__init__ %r %r', args, kwargs)

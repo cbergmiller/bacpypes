@@ -4,9 +4,8 @@
 Service Subpackage
 """
 
-from . import detect
-
-from . import device
-from . import object
-from . import cov
-from . import file
+from .detect import *
+from .device import *
+from .object import *
+from .cov import *
+from .file import *

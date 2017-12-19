@@ -7,16 +7,16 @@ This application has a static list of points that it would like to read.  It rea
 values of each of them in turn and then quits.
 """
 
-
-import pprint
+from pprint import pprint
 import logging
-from asyncio import get_event_loop
+import asyncio
 
 from bacpypes.comm import IOCB
 from bacpypes.link import Address
 from bacpypes.object import get_datatype
 from bacpypes.debugging import LoggingFormatter
-from bacpypes.apdu import ReadPropertyRequest, ReadPropertyMultipleRequest, ReadAccessSpecification, PropertyReference, ReadPropertyACK
+from bacpypes.apdu import ReadPropertyRequest, ReadPropertyMultipleRequest, ReadAccessSpecification, PropertyReference, \
+    ReadPropertyACK
 from bacpypes.primitivedata import Unsigned
 from bacpypes.constructeddata import Array
 
@@ -24,7 +24,7 @@ from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
-_logger.setLevel(logging.DEBUG)
+_logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
@@ -46,18 +46,6 @@ class ReadPointListApplication(BIPSimpleApplication):
         # make a list of the response values
         self.device_properties = {}
         self.response_values = {}
-
-    async def do_device_request(self, device_id, addr):
-        _logger.debug(f'    - do_device_request: {device_id} {addr}')
-        blocks = await self.execute_requests(
-            ReadPropertyRequest(
-                objectIdentifier=('device', device_id),
-                propertyIdentifier=property_id,
-                destination=Address(addr)
-            ) for property_id in ['objectName', 'modelName', 'vendorName', 'serialNumber', 'objectList']
-        )
-        for iocb in blocks:
-            self.complete_device_request(iocb)
 
     def complete_device_request(self, iocb):
         if iocb.io_error:
@@ -86,7 +74,6 @@ class ReadPointListApplication(BIPSimpleApplication):
             self.device_properties[apdu.propertyIdentifier] = value
         else:
             _logger.debug("    - ioError or ioResponse expected")
-        get_event_loop().stop()
 
     def do_multi_request(self, addr):
         _logger.debug('do_request')
@@ -131,7 +118,8 @@ class ReadPointListApplication(BIPSimpleApplication):
                     read_result = element.readResult
                     # check for an error
                     if read_result.propertyAccessError is not None:
-                        self.response_values[object_identifier][property_identifier] = f'! {read_result.propertyAccessError}'
+                        self.response_values[object_identifier][
+                            property_identifier] = f'! {read_result.propertyAccessError}'
                     else:
                         # here is the value
                         property_value = read_result.propertyValue
@@ -152,7 +140,34 @@ class ReadPointListApplication(BIPSimpleApplication):
                         self.response_values[object_identifier][property_identifier] = value
         if iocb.io_error:
             _logger.debug("    - error: %r", iocb.io_error)
-        get_event_loop().stop()
+        asyncio.get_event_loop().stop()
+
+
+async def read_device_props(app, device_id, addr):
+    return await app.execute_requests(
+        ReadPropertyRequest(
+            objectIdentifier=('device', device_id),
+            propertyIdentifier=property_id,
+            destination=Address(addr)
+        ) for property_id in ['objectName', 'modelName', 'vendorName', 'serialNumber', 'objectList']
+    )
+
+
+async def read_prop_values(app, addr):
+    read_access_specs = []
+    for i in range(40):
+        read_access_specs.append(
+            ReadAccessSpecification(
+                objectIdentifier=('analogInput', i),
+                listOfPropertyReferences=[PropertyReference(propertyIdentifier='presentValue')],
+            )
+        )
+    return await app.execute_request(
+        ReadPropertyMultipleRequest(
+            listOfReadAccessSpecs=read_access_specs,
+            destination=Address(addr)
+        ),
+    )
 
 
 def main():
@@ -165,31 +180,24 @@ def main():
         vendorIdentifier=15,
     )
 
-    points = []
-    for i in range(40):
-        points.append(('analogInput', i, ['presentValue']))
-    app = ReadPointListApplication(points, this_device, '10.81.0.14')
+    app = BIPSimpleApplication(this_device, '10.81.0.14')
 
     # get the services supported
     services_supported = app.get_services_supported()
     _logger.debug(f'    - services_supported: {services_supported}')
-
-    # let the device object know
     this_device.protocolServicesSupported = services_supported.value
-    # deferred(app.do_multi_request, '192.168.2.70')
 
-    loop = get_event_loop()
-    loop.create_task(app.do_device_request(881000, '192.168.2.70'))
+    loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        loop.close()
+    device_values = loop.run_until_complete(read_device_props(app, 881000, '192.168.2.70'))
+    prop_values = loop.run_until_complete(read_prop_values(app, '192.168.2.70'))
+    loop.run_until_complete(loop.shutdown_asyncgens())
+    loop.close()
 
     # dump out the results
-    pprint.pprint(app.device_properties)
-    pprint.pprint(app.response_values)
+    pprint(device_values)
+    pprint(prop_values)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

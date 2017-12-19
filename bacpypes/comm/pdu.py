@@ -11,7 +11,10 @@ __all__ = ['PDU']
 
 class PDU(PCI, PDUData):
     """
-    PDU
+    A Protocol Data Unit (PDU) is the name for a collection of information that
+    is passed between two entities.  It is composed of Protcol Control Information
+    (PCI) - information about addressing, processing instructions - and data.
+    The set of classes in this module are not specific to BACnet.
     """
     def __init__(self, data=None, **kwargs):
         if DEBUG: _logger.debug('__init__ %r %r', data, kwargs)

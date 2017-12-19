@@ -1,6 +1,7 @@
 
 import asyncio
 import logging
+from collections import defaultdict
 from .iocb_states import *
 from .io_controller import IOController
 from .iocb import IOCB
@@ -22,7 +23,7 @@ class IOQController(IOController):
         _logger.debug('__init__ name=%r', name)
         IOController.__init__(self, name)
         # queues for each destination
-        self.address_queues = {}
+        self.address_queues = defaultdict(lambda: asyncio.PriorityQueue())
 
     def request_io(self, iocb: IOCB):
         """
@@ -40,19 +41,20 @@ class IOQController(IOController):
 
     def _put_to_queue(self, iocb: IOCB):
         destination_address = iocb.request.pduDestination
-        if destination_address not in self.address_queues:
-            queue = self.address_queues[destination_address] = asyncio.PriorityQueue()
+        # if there is no queue for this address yet, it will be constructed by the defaultdict
+        queue = self.address_queues[destination_address]
+        if queue.empty():
+            _logger.debug('start new IO Queue Consumer for %r', destination_address)
             asyncio.get_event_loop().create_task(self._process_queue(destination_address))
-        else:
-            queue = self.address_queues[destination_address]
         queue.put_nowait(iocb)
 
     async def _process_queue(self, destination_address):
         """
         Sequentially process IOCBs from the address queue.
         """
+        queue = self.address_queues[destination_address]
         while True:
-            iocb = await self.address_queues[destination_address].get()
+            iocb = await queue.get()
             if iocb.io_state != ABORTED:
                 try:
                     # let derived class figure out how to process this
@@ -61,6 +63,10 @@ class IOQController(IOController):
                 except Exception as e:
                     # if there was an error, abort the request
                     self.abort_io(iocb, e)
+            queue.task_done()
+            if queue.empty():
+                _logger.debug('exiting IO Queue Consumer for %r', destination_address)
+                break
 
     def _process_io(self, iocb: IOCB):
         """Figure out how to respond to this request.  This must be provided by the derived class."""

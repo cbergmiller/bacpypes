@@ -68,7 +68,7 @@ def decode_max_apdu_length_accepted(arg):
 
 class APDU(APCI, PDUData):
     """
-    APDU
+    Application layer Protocol Data Unit
     """
 
     def __init__(self, *args, **kwargs):
@@ -95,6 +95,9 @@ class APDU(APCI, PDUData):
         self.apdu_contents(use_dict=use_dict, as_class=as_class)
         # return what we built/updated
         return use_dict
+
+    def value(self):
+        pass
 
 
 class _APDU(APDU):

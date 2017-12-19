@@ -39,6 +39,7 @@ class Application(ApplicationServiceElement, Collector):
             self.objectIdentifier[localDevice.objectIdentifier] = localDevice
         # local address deprecated, but continue to use the old initializer
         if localAddress is not None:
+            _logger.info('local address at the application layer deprecated')
             warnings.warn('local address at the application layer deprecated', DeprecationWarning)
             # allow the address to be cast to the correct type
             if isinstance(localAddress, Address):

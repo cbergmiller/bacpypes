@@ -17,7 +17,10 @@ _long_mask = 0xFFFFFFFF
 
 class PDUData:
     """
-    PDUData
+    The PDUData class has functions for extracting information from the front
+    of the data octet string, or append information to the end.  These are helper
+    functions but may not be applicable for higher layer protocols which may
+    be passing significantly more complex data.
     """
 
     def __init__(self, data=None, *args, **kwargs):

@@ -3,6 +3,7 @@ import asyncio
 import logging
 from ..comm import IOQController, IOCB
 from ..apdu import UnconfirmedRequestPDU, SimpleAckPDU, ComplexAckPDU, ErrorPDU, RejectPDU, AbortPDU
+from ..apdu.util import get_apdu_value
 from .app import Application
 
 _logger = logging.getLogger(__name__)
@@ -64,17 +65,24 @@ class ApplicationIOController(IOQController, Application):
         # this is an ack, error, reject or abort
         self._app_complete(apdu.pduSource, apdu)
 
-    async def execute_requests(self, requests):
+    async def execute_request(self, request, throw_on_error=False):
         """
-        Execute the given requests and return the result when they are finished.
-        :param requests: iterable of APDU requests
-        :return: List of results (result is None if unconfirmed request)
+        Execute the given request and return the result when finished.
+        :param request: APDU request instance
+        :param throw_on_error: Abort on the first error and throw
+        :return: result value (None if unconfirmed request)
         """
-        blocks = []
-        for request in requests:
-            iocb = IOCB(request)
+        iocb = IOCB(request)
+        self.request_io(iocb)
+        await iocb.wait()
+        return get_apdu_value(iocb.io_response)
+
+    async def execute_requests(self, requests, throw_on_error=False):
+        iocbs = [IOCB(request) for request in requests]
+        for iocb in iocbs:
             self.request_io(iocb)
-            blocks.append(iocb)
-        for iocb in blocks:
+        results = []
+        for iocb in iocbs:
             await iocb.wait()
-        return blocks
+            results.append(get_apdu_value(iocb.io_response))
+        return results
