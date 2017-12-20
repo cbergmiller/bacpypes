@@ -9,6 +9,7 @@ This is a diverging fork of the BACpypes python package.
 - Reduction of multiple inheritance and overall amount of code (for easier maintenance)
 - PEP8 compliant code
 - Simplified asynchronous API
+- Removal of the TCP transport modules
 
 This package will only be compatible at Python 3.6 and above.
 
@@ -22,7 +23,7 @@ This package will only be compatible at Python 3.6 and above.
 
 - `COVSubscription`
 - `BIPForeignApplication`
-- The TCP stack
+- ...
 
 ## Installation
 

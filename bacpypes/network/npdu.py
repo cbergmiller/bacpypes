@@ -19,7 +19,6 @@ def register_npdu_type(klass):
     npdu_types[klass.messageType] = klass
 
 
-
 class NPDU(NPCI, PDUData):
 
     def __init__(self, *args, **kwargs):
