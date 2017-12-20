@@ -7,10 +7,10 @@ This is a diverging fork of the BACpypes python package.
 - Removal of asyncore dependecy and the bacpypes.core event loop in favour of asyncio
 - Refactored project structure (one class per module where feasible)
 - Reduction of multiple inheritance and overall amount of code (for easier maintenance)
-- PEP8 compliant code refactoring
-- Simplified asynchronous application API
+- PEP8 compliant code
+- Simplified asynchronous API
 
-This package will only run at Python 3.6 and above.
+This package will only be compatible at Python 3.6 and above.
 
 ## State of Development
 
@@ -26,7 +26,7 @@ This package will only run at Python 3.6 and above.
 
 ## Installation
 
-This fork ist not uploaded to PIP but you can install it like this: 
+This fork ist not uploaded to PyPI but you can install it like this: 
 
 ```cmd
 pip install git+https://github.com/cbegmiller/bacpypes
