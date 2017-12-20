@@ -29,7 +29,7 @@ This package will only be compatible at Python 3.6 and above.
 This fork ist not uploaded to PyPI but you can install it like this: 
 
 ```cmd
-pip install git+https://github.com/cbegmiller/bacpypes
+pip install git+https://github.com/cbergmiller/bacpypes
 ```
 
 ## Usage
@@ -69,7 +69,6 @@ if __name__ == '__main__':
     )
     app = BIPSimpleApplication(this_device, '192.168.1.2')
     loop = asyncio.get_event_loop()
-    loop.set_debug(True)
     analog_value = loop.run_until_complete(read_analog_value(app, '192.168.1.3'))
     loop.close()
     print(analog_value)
