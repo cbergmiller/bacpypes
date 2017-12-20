@@ -1,41 +1,3 @@
-# Asnyc. BACpypes
-
-This is a diverging fork of the BACpypes python package.
-
-## Development goals
-
-- Removal of asyncore dependecy and the bacpypes.core event loop in favour of asyncio
-- Refactored project structure (one class per module where feasible)
-- Reduction of multiple inheritance and overall amount of code (for easier maintenance)
-- PEP8 compliant code refactoring
-- Simplified asynchronous application API
-
-This package will only run at Python 3.6 and above.
-
-## State of Development
-
-### What works so far
-
-- `BIPSimpleApplication` reading properties
-
-### Still to be tested/refactored/implemented
-
-- `COVSubscription`
-- `BIPForeignApplication`
-- The TCP stack
-
-## Installation
-
-This fork ist not uploaded to PIP but you can install it like this: 
-
-```cmd
-pip install git+https://github.com/cbegmiller/bacpypes
-```
-
-## Usage
-
-### High level API
-```python
 
 import asyncio
 from bacpypes import Address, ReadPropertyRequest, BIPSimpleApplication, LocalDeviceObject
@@ -73,5 +35,3 @@ if __name__ == '__main__':
     analog_value = loop.run_until_complete(read_analog_value(app, '192.168.1.3'))
     loop.close()
     print(analog_value)
-
-```

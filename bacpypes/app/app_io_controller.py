@@ -75,7 +75,10 @@ class ApplicationIOController(IOQController, Application):
         iocb = IOCB(request)
         self.request_io(iocb)
         await iocb.wait()
-        return get_apdu_value(iocb.io_response)
+        if iocb.io_response:
+            return get_apdu_value(iocb.io_response)
+        elif iocb.io_error:
+            return iocb.io_error
 
     async def execute_requests(self, requests, throw_on_error=False):
         iocbs = [IOCB(request) for request in requests]

@@ -1,54 +1,6 @@
-#!/usr/bin/python
 
-#
-#   Communications Core Modules
-#
-#from . import comm
-from . import task
-#from . import capability
-#from . import iocb
-
-#
-#   Link Layer Modules
-#
-
-#from . import pdu
-#from . import vlan
-
-#
-#   Network Layer Modules
-#
-
-#from . import npdu
-#from . import netservice
-
-#
-#   Virtual Link Layer Modules
-#
-
-# from . import bvll
-# from . import bvllservice
-#from . import bsll
-#from . import bsllservice
-
-#
-#   Application Layer Modules
-#
-
-from . import primitivedata
-from . import constructeddata
-from . import basetypes
-
-from . import object
-
-#from . import apdu
-
-#from . import app
-#from . import appservice
-from . import service
-
-#
-#   Analysis
-#
-
-from . import analysis
+from .app import *
+from .apdu import *
+from .link import *
+from .debugging import LoggingFormatter
+from .service import *
