@@ -330,13 +330,13 @@ def SequenceOf(cls):
 
         def __init__(self, value=None):
             if DEBUG: _logger.debug("(%r)__init__ %r (subtype=%r)", self.__class__.__name__, value, self.subtype)
-
+            _logger.debug('_SequenceOf %r', value)
             if value is None:
                 self.value = []
             elif isinstance(value, list):
                 self.value = value
             else:
-                raise TypeError("invalid constructor datatype")
+                raise TypeError('Invalid Sequence datatype (must be None or list)')
 
         def append(self, value):
             if issubclass(self.subtype, Atomic):

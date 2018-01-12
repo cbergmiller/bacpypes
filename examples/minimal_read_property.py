@@ -29,9 +29,9 @@ if __name__ == '__main__':
         segmentationSupported='segmentedBoth',
         vendorIdentifier=15,
     )
-    app = BIPSimpleApplication(this_device, '192.168.1.2')
+    app = BIPSimpleApplication(this_device, '192.168.2.109')
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    analog_value = loop.run_until_complete(read_analog_value(app, '192.168.1.3'))
+    analog_value = loop.run_until_complete(read_analog_value(app, '192.168.2.70'))
     loop.close()
     print(analog_value)

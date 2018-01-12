@@ -21,7 +21,7 @@ def get_apdu_value(apdu):
         for result in apdu.listOfReadAccessResults:
             # here is the object identifier
             object_type, object_id = result.objectIdentifier
-            _logger.info('multi objectIdentifier %s %r', type(result.objectIdentifier), result.objectIdentifier)
+            _logger.debug('multi objectIdentifier %s %r', type(result.objectIdentifier), result.objectIdentifier)
             _v = values[f'{object_type}{object_id}'] = {}
             for element in result.listOfResults:
                 _v[element.propertyIdentifier] = _get_value_from_result(element, object_type)

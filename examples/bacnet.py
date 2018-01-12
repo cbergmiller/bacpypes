@@ -24,16 +24,16 @@ from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
-_logger.setLevel(logging.INFO)
+_logger.setLevel(logging.WARNING)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
 _logger.addHandler(ch)
 
 _alogger = logging.getLogger('asyncio')
-_alogger.setLevel(logging.DEBUG)
+_alogger.setLevel(logging.INFO)
 ach = logging.StreamHandler()
-ach.setLevel(logging.DEBUG)
+ach.setLevel(logging.INFO)
 ach.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
 _alogger.addHandler(ach)
 
@@ -65,6 +65,42 @@ async def read_prop_values(app, addr):
     )
 
 
+async def discover_properties(app, device_id, addr):
+    objects = await app.execute_request(
+        ReadPropertyRequest(
+            objectIdentifier=('device', device_id),
+            propertyIdentifier='objectList',
+            destination=Address(addr)
+        )
+    )
+    result = {}
+    for object_identifier in objects:
+        _logger.info(object_identifier)
+        read_access_specs = [
+            ReadAccessSpecification(
+                objectIdentifier=object_identifier,
+                listOfPropertyReferences=[
+                    PropertyReference(propertyIdentifier='presentValue'),
+                    PropertyReference(propertyIdentifier='objectName'),
+                    PropertyReference(propertyIdentifier='objectType'),
+                    PropertyReference(propertyIdentifier='description'),
+                    PropertyReference(propertyIdentifier='units'),
+                ],
+            ),
+        ]
+        result.update(
+            await app.execute_request(
+                ReadPropertyMultipleRequest(
+                    listOfReadAccessSpecs=read_access_specs,
+                    destination=Address(addr)
+                ),
+            )
+        )
+    global properties
+    properties = result
+    asyncio.get_event_loop().stop()
+
+
 if __name__ == '__main__':
     # This represents the local device
     this_device = LocalDeviceObject(
@@ -74,7 +110,7 @@ if __name__ == '__main__':
         segmentationSupported='segmentedBoth',
         vendorIdentifier=15,
     )
-    app = BIPSimpleApplication(this_device, '10.81.0.14')
+    app = BIPSimpleApplication(this_device, '192.168.2.109')
 
     # get the services supported
     services_supported = app.get_services_supported()
@@ -83,10 +119,18 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    device_values = loop.run_until_complete(read_device_props(app, 881000, '192.168.2.70'))
-    prop_values = loop.run_until_complete(read_prop_values(app, '192.168.2.70'))
-    loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.close()
+    host = '192.168.2.70'
 
-    pprint(device_values)
-    pprint(prop_values)
+    # loop.create_task(read_device_props(app, 881000, host))
+    properties = None
+    loop.create_task(discover_properties(app, 881000, host))
+
+    loop.run_forever()
+
+    # prop_values = loop.run_until_complete(read_prop_values(app, host))
+
+    # pprint(properties)
+    for key, prop in properties.items():
+        if prop['objectType'] == 'device':
+            continue
+        print(f'{key:<20}{prop["objectName"]!s:<20}{prop["description"]!s:60.60} {prop["presentValue"]:.2f} {prop["units"]}')

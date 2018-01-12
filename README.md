@@ -4,7 +4,7 @@ This is a diverging fork of the BACpypes python package.
 
 ## Development goals
 
-- Removal of asyncore dependecy and the bacpypes.core event loop in favour of asyncio
+- Removal of asyncore dependency and the bacpypes.core event loop in favour of asyncio
 - Refactored project structure (one class per module where feasible)
 - Reduction of multiple inheritance and overall amount of code (for easier maintenance)
 - PEP8 compliant code
