@@ -44,7 +44,7 @@ class ApplicationIOController(IOQController, Application):
         iocb = self.active_iocbs.get(address)
         # make sure it has an active iocb
         if not iocb:
-            _logger.error('no active request for %r %r', address, self.active_iocbs)
+            _logger.info('no active request for %r %r', address, self.active_iocbs)
             return
         # this request is complete
         if isinstance(apdu, (None.__class__, SimpleAckPDU, ComplexAckPDU)):

@@ -1,6 +1,6 @@
 # Asnyc. BACpypes
 
-This is a diverging fork of the BACpypes python package.
+This is a diverging fork of the [BACpypes](https://github.com/JoelBender/bacpypes) python package.
 
 ## Development goals
 

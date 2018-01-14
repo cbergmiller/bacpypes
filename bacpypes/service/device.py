@@ -119,12 +119,12 @@ class WhoIsIAmServices(Capability):
     def who_is(self, low_limit=None, high_limit=None, address=None):
         _logger.debug("who_is")
         # build a request
-        whoIs = WhoIsRequest()
+        who_is = WhoIsRequest()
         # defaults to a global broadcast
         if not address:
             address = GlobalBroadcast()
         # set the destination
-        whoIs.pduDestination = address
+        who_is.pduDestination = address
         # check for consistent parameters
         if low_limit is not None:
             if high_limit is None:
@@ -132,19 +132,19 @@ class WhoIsIAmServices(Capability):
             if (low_limit < 0) or (low_limit > 4194303):
                 raise ParameterOutOfRange("low_limit out of range")
             # low limit is fine
-            whoIs.deviceInstanceRangeLowLimit = low_limit
+            who_is.deviceInstanceRangeLowLimit = low_limit
         if high_limit is not None:
             if low_limit is None:
                 raise MissingRequiredParameter("low_limit required")
             if (high_limit < 0) or (high_limit > 4194303):
                 raise ParameterOutOfRange("high_limit out of range")
             # high limit is fine
-            whoIs.deviceInstanceRangeHighLimit = high_limit
-        _logger.debug("    - whoIs: %r", whoIs)
+            who_is.deviceInstanceRangeHighLimit = high_limit
+        _logger.debug("    - who_is: %r", who_is)
         ### put the parameters someplace where they can be matched when the
         ### appropriate I-Am comes in
         # away it goes
-        self.request(whoIs)
+        self.request(who_is)
 
     def do_WhoIsRequest(self, apdu):
         """Respond to a Who-Is request."""

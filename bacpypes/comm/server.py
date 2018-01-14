@@ -4,7 +4,7 @@ import logging
 from .bindings import bind, server_map, client_map
 from ..errors import ConfigurationError
 
-DEBUG = False
+DEBUG = True
 _logger = logging.getLogger(__name__)
 __all__ = ['Server']
 

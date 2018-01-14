@@ -69,7 +69,7 @@ class UDPMultiplexer:
         # create and bind the direct address
         self.direct = _MultiplexClient(self)
         loop = asyncio.get_event_loop()
-        listen = loop.create_datagram_endpoint(UDPDirector, local_addr=self.addrTuple)
+        listen = loop.create_datagram_endpoint(UDPDirector, local_addr=self.addrTuple, allow_broadcast=True)
         transport, protocol = loop.run_until_complete(listen)
         self.protocol = protocol
         bind(self.direct, protocol)
