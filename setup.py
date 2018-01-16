@@ -21,7 +21,7 @@ setup(
     version='1.0.0',
     description='BACnet Communications Library',
     long_description='BACpypes provides a BACnet application layer and network layer written in Python.',
-    author='',
+    author='Joel Bender, Christian Bergmiller',
     author_email='',
     url='https://github.com/cbergmiller/bacpypes',
     packages=find_packages(where='bacpypes'),

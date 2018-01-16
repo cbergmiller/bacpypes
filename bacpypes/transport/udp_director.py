@@ -11,7 +11,7 @@ from ..core import deferred
 from ..comm import PDU, Server, ServiceAccessPoint
 from .udp_actor import UDPActor
 
-DEBUG = False
+DEBUG = True
 _logger = logging.getLogger(__name__)
 __all__ = ['UDPDirector']
 
@@ -41,14 +41,14 @@ class UDPDirector(asyncio.DatagramProtocol, Server, ServiceAccessPoint):
         """Called by the event loop."""
         if DEBUG: _logger.debug("    - received %d octets from %s", len(data), addr)
         # send the PDU up to the client
-        deferred(self._response, PDU(data, source=addr))
+        self._response(PDU(data, source=addr))
 
     def error_received(self, exc):
         """Called by the event loop."""
         if exc.args[0] == 11:
             pass
         else:
-            if DEBUG: _logger.debug("    - socket error: %s", exc)
+            if DEBUG: _logger.error("    - socket error: %s", exc)
             # pass along to a handler
             return
             # ToDo: handle error based on pdu destination

@@ -5,7 +5,7 @@ import logging
 from ..task import call_later
 
 
-DEBUG = False
+DEBUG = True
 _logger = logging.getLogger(__name__)
 __all__ = ['UDPActor', 'UDPPickleActor']
 
