@@ -24,7 +24,7 @@ setup(
     author='Joel Bender, Christian Bergmiller',
     author_email='',
     url='https://github.com/cbergmiller/bacpypes',
-    packages=find_packages(where='bacpypes'),
+    packages=find_packages(),
     package_dir={
         'bacpypes': 'bacpypes',
     },
