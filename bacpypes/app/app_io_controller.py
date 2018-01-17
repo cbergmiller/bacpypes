@@ -79,7 +79,7 @@ class ApplicationIOController(IOQController, Application):
             return get_apdu_value(iocb.io_response)
         elif iocb.io_error:
             if throw_on_error:
-                raise IOError(iocb.io_error)
+                raise IOError(str(iocb.io_error))
             return iocb.io_error
 
     async def execute_requests(self, requests, throw_on_error=False):

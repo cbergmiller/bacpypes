@@ -46,12 +46,15 @@ class BIPForeignApplication(ApplicationIOController, WhoIsIAmServices, ReadWrite
         # on the UDP multiplexer
         self.bip = BIPForeign(bbmd_address, bbmd_ttl)
         self.annexj = AnnexJCodec()
-        self.mux = UDPMultiplexer(self.localAddress, noBroadcast=True)
+        self.mux = UDPMultiplexer(self.localAddress, no_broadcast=True)
         # bind the bottom layers
         bind(self.bip, self.annexj, self.mux.annexJ)
         # bind the NSAP to the stack, no network number
         self.nsap.bind(self.bip)
 
-    def close_socket(self):
+    async def create_endoint(self):
+        await self.mux.create_endpoint()
+
+    def close_endpoint(self):
         # pass to the multiplexer, then down to the sockets
-        self.mux.close_socket()
+        self.mux.close_endpoint()

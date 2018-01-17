@@ -37,10 +37,11 @@ class UDPMultiplexer:
     UDPMultiplexer
     """
 
-    def __init__(self, addr=None, noBroadcast=False):
-        if DEBUG: _logger.debug('__init__ %r noBroadcast=%r', addr, noBroadcast)
+    def __init__(self, addr=None, no_broadcast=False):
+        if DEBUG: _logger.debug('__init__ %r noBroadcast=%r', addr, no_broadcast)
         # check for some options
-        special_broadcast = False
+        self.special_broadcast = False
+        self.no_broadcast = no_broadcast
         if addr is None:
             self.address = Address()
             self.addrTuple = ('', 47808)
@@ -56,47 +57,47 @@ class UDPMultiplexer:
             self.addrBroadcastTuple = self.address.addrBroadcastTuple
             # check for no broadcasting (loopback interface)
             if not self.addrBroadcastTuple:
-                noBroadcast = True
+                self.no_broadcast = True
             elif self.addrTuple == self.addrBroadcastTuple:
                 # old school broadcast address
                 self.addrBroadcastTuple = ('255.255.255.255', self.addrTuple[1])
             else:
-                special_broadcast = True
+                self.special_broadcast = True
         if DEBUG:
             _logger.debug('    - address: %r', self.address)
             _logger.debug('    - addrTuple: %r', self.addrTuple)
             _logger.debug('    - addrBroadcastTuple: %r', self.addrBroadcastTuple)
         # create and bind the direct address
         self.direct = _MultiplexClient(self)
-        loop = asyncio.get_event_loop()
-        listen = loop.create_datagram_endpoint(UDPDirector, local_addr=self.addrTuple, allow_broadcast=True)
-        transport, protocol = loop.run_until_complete(listen)
-        self.protocol = protocol
-        bind(self.direct, protocol)
-        # create and bind the broadcast address for non-Windows
-        if special_broadcast and (not noBroadcast) and sys.platform in ('linux', 'darwin'):
-            self.broadcast = _MultiplexClient(self)
-            listen = loop.create_datagram_endpoint(
-                UDPDirector,
-                remote_addr=self.addrBroadcastTuple,
-                reuse_address=True
-            )
-            transport, protocol = loop.run_until_complete(listen)
-            self.broadcastProtocol = protocol
-            bind(self.direct, self.broadcastProtocol)
-        else:
-            self.broadcast = None
-            self.broadcastProtocol = None
+        self.protocol = None
+        self.broadcast = None
+        self.broadcast_protocol = None
         # create and bind the Annex H and J servers
         self.annexH = _MultiplexServer(self)
         self.annexJ = _MultiplexServer(self)
 
-    def close_socket(self):
+    async def create_endpoint(self):
+        loop = asyncio.get_event_loop()
+        transport, protocol = await loop.create_datagram_endpoint(
+            UDPDirector, local_addr=self.addrTuple, allow_broadcast=True
+        )
+        self.protocol = protocol
+        bind(self.direct, protocol)
+        # create and bind the broadcast address for non-Windows
+        if self.special_broadcast and (not self.no_broadcast) and sys.platform in ('linux', 'darwin'):
+            self.broadcast = _MultiplexClient(self)
+            transport, protocol = await loop.create_datagram_endpoint(
+                UDPDirector, remote_addr=self.addrBroadcastTuple, reuse_address=True
+            )
+            self.broadcast_protocol = protocol
+            bind(self.direct, self.broadcast_protocol)
+
+    def close_endpoint(self):
         if DEBUG: _logger.debug('close_socket')
         # pass along the close to the director(s)
-        self.protocol.close_socket()
-        if self.broadcastProtocol:
-            self.broadcastProtocol.close_socket()
+        self.protocol.close_endpoint()
+        if self.broadcast_protocol:
+            self.broadcast_protocol.close_endpoint()
 
     def indication(self, server, pdu):
         if DEBUG: _logger.debug('indication %r %r', server, pdu)

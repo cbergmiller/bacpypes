@@ -52,6 +52,9 @@ class BIPSimpleApplication(ApplicationIOController, WhoIsIAmServices, ReadWriteP
         # bind the BIP stack to the network, no network number
         self.nsap.bind(self.bip)
 
+    async def create_endoint(self):
+        await self.mux.create_endpoint()
+
     def close_socket(self):
         # pass to the multiplexer, then down to the sockets
-        self.mux.close_socket()
+        self.mux.close_endpoint()
