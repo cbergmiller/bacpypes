@@ -7,7 +7,7 @@ from ..comm import Client, Server, bind
 
 from ..link import Address, LocalBroadcast, PDU, unpack_ip_addr
 
-DEBUG = False
+DEBUG = True
 _logger = logging.getLogger(__name__)
 __all__ = ['UDPMultiplexer']
 

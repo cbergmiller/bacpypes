@@ -35,4 +35,3 @@ class BVLLServiceElement(ApplicationServiceElement):
             getattr(self, fn)(npdu)
         else:
             _logger.warning('no handler for %s', fn)
-

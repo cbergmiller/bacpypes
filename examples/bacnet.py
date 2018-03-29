@@ -119,11 +119,11 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    host = '192.168.2.70'
+    host = '192.168.2.16'
 
     # loop.create_task(read_device_props(app, 881000, host))
     properties = None
-    loop.create_task(discover_properties(app, 881000, host))
+    loop.create_task(discover_properties(app, 123, host))
 
     loop.run_forever()
 
@@ -133,4 +133,4 @@ if __name__ == '__main__':
     for key, prop in properties.items():
         if prop['objectType'] == 'device':
             continue
-        print(f'{key:<20}{prop["objectName"]!s:<20}{prop["description"]!s:60.60} {prop["presentValue"]:.2f} {prop["units"]}')
+        print(f'{key:<24}{prop["objectName"]!s:40.40}{prop["description"]!s:60.60} {prop["presentValue"]} {prop["units"]}')

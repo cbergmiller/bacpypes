@@ -65,16 +65,25 @@ class ApplicationIOController(IOQController, Application):
         # this is an ack, error, reject or abort
         self._app_complete(apdu.pduSource, apdu)
 
-    async def execute_request(self, request, throw_on_error=False):
+    async def execute_request(self, request, throw_on_error=False, timeout=10):
         """
         Execute the given request and return the result when finished.
+        Please note: The timeout is redundant since the ClientSSM also checks for timeout.
         :param request: APDU request instance
         :param throw_on_error: Abort on the first error and throw
+        :param timeout: Optional timeout in seconds
         :return: result value (None if unconfirmed request)
         """
         iocb = IOCB(request)
         self.request_io(iocb)
-        await iocb.wait()
+        if timeout:
+            iocb.set_timeout(timeout)
+        try:
+            await iocb.wait(timeout=timeout)
+        except TimeoutError as e:
+            if throw_on_error:
+                raise
+            return e
         if iocb.io_response:
             return get_apdu_value(iocb.io_response)
         elif iocb.io_error:

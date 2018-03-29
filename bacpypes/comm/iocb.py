@@ -126,13 +126,19 @@ class IOCB(DebugContents):
         if self.io_complete.is_set():
             self.trigger()
 
-    async def wait(self):
+    def wait(self, timeout=None):
         """
+        COROUTINE
         Block until the IO operation is complete and the positive or negative
         result has been placed in the ICOB.
+        :param timeout: optional timeout in seconds
         """
         _logger.debug('wait(%d)', self.io_id)
-        await self.io_complete.wait()
+        coro = self.io_complete.wait()
+        if timeout:
+            return asyncio.wait_for(coro, timeout)
+        else:
+            return coro
 
     def trigger(self):
         """
@@ -187,7 +193,7 @@ class IOCB(DebugContents):
         """
         Set a time limit on the amount of time an IOCB can take to be completed,
         and if the time is exceeded then the IOCB is aborted.
-        :param seconds delay: the time limit for processing the IOCB
+        :param delay: the time limit for processing the IOCB in seconds
         :param err: the error to use when the IOCB is aborted
         """
         _logger.debug('set_timeout(%d) %s err=%r', self.io_id, delay, err)
@@ -207,4 +213,3 @@ class IOCB(DebugContents):
             return self.io_priority < other.io_priority
         else:
             return self.io_id < other.io_id
-
