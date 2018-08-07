@@ -36,10 +36,7 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
 
     def indication(self, pdu):
         if DEBUG: _logger.debug('indication %r', pdu)
-        # check the BBMD registration status, we may not be registered
-        if self.registrationStatus != 0:
-            if DEBUG: _logger.debug('    - packet dropped, unregistered')
-            return
+
         # check for local stations
         if pdu.pduDestination.addrType == Address.localStationAddr:
             # make an original unicast PDU
@@ -49,6 +46,10 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             self.request(xpdu)
         # check for broadcasts
         elif pdu.pduDestination.addrType == Address.localBroadcastAddr:
+            # check the BBMD registration status, we may not be registered
+            if self.registrationStatus != 0:
+                if DEBUG: _logger.debug('    - packet dropped, unregistered')
+                return
             # make an original broadcast PDU
             xpdu = DistributeBroadcastToNetwork(pdu, user_data=pdu.pduUserData)
             xpdu.pduDestination = self.bbmdAddress
@@ -76,6 +77,11 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
                 # schedule for a refresh
                 call_later(self.bbmdTimeToLive, self.process_task)
             return
+        elif isinstance(pdu, OriginalUnicastNPDU):
+            # build a vanilla PDU
+            xpdu = PDU(pdu.pduData, source=pdu.pduSource, destination=pdu.pduDestination, user_data=pdu.pduUserData)
+            # send it upstream
+            self.response(xpdu)
         # check the BBMD registration status, we may not be registered
         if self.registrationStatus != 0:
             if DEBUG: _logger.debug('    - packet dropped, unregistered')
@@ -86,11 +92,6 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
         elif isinstance(pdu, ReadForeignDeviceTableAck):
             # send this to the service access point
             self.sap_response(pdu)
-        elif isinstance(pdu, OriginalUnicastNPDU):
-            # build a vanilla PDU
-            xpdu = PDU(pdu.pduData, source=pdu.pduSource, destination=pdu.pduDestination, user_data=pdu.pduUserData)
-            # send it upstream
-            self.response(xpdu)
         elif isinstance(pdu, ForwardedNPDU):
             # build a PDU with the source from the real source
             xpdu = PDU(pdu.pduData, source=pdu.bvlciAddress, destination=LocalBroadcast(), user_data=pdu.pduUserData)
