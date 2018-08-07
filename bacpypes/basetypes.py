@@ -1661,6 +1661,17 @@ class ErrorType(Sequence):
     ]
 
 
+class LightingCommand(Sequence):
+    sequenceElements = [
+        Element('operation', LightingOperation, 0),
+        Element('targetLevel', Real, 1),  # optional
+        Element('rampRate', Real, 2),  # optional
+        Element('stepIncrement', Real, 3),  # optional
+        Element('fadeTime', Unsigned, 4),  # optional
+        Element('priority', Unsigned, 5),  # optional
+    ]
+
+
 class ObjectPropertyReference(Sequence):
     sequenceElements = [
         Element('objectIdentifier', ObjectIdentifier, 0),
@@ -1865,17 +1876,6 @@ class CalendarEntry(Choice):
         Element('date', Date, 0),
         Element('dateRange', DateRange, 1),
         Element('weekNDay', WeekNDay, 2),
-    ]
-
-
-class LightingCommand(Sequence):
-    sequenceElements = [
-        Element('operation', LightingOperation, 0),
-        Element('targetLevel', Real, 1),  # optional
-        Element('rampRate', Real, 2),  # optional
-        Element('stepIncrement', Real, 3),  # optional
-        Element('fadeTime', Unsigned, 4),  # optional
-        Element('priority', Unsigned, 5),  # optional
     ]
 
 
