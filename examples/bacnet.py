@@ -24,9 +24,9 @@ from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
-_logger.setLevel(logging.WARNING)
+_logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
+ch.setLevel(logging.INFO)
 ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
 _logger.addHandler(ch)
 
@@ -71,7 +71,7 @@ async def discover_properties(app, device_id, addr):
             objectIdentifier=('device', device_id),
             propertyIdentifier='objectList',
             destination=Address(addr)
-        )
+        ), throw_on_error=True
     )
     result = {}
     for object_identifier in objects:
@@ -119,17 +119,16 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    host = '192.168.2.16'
-
-    # loop.create_task(read_device_props(app, 881000, host))
+    host = '192.168.2.70'
+    device_id = 881000
+    loop.run_until_complete(app.create_endoint())
+    # loop.create_task(read_device_props(app, device_id, host))
     properties = None
-    loop.create_task(discover_properties(app, 123, host))
-
-    loop.run_forever()
-
+    loop.run_until_complete(discover_properties(app, device_id, host))
+    loop.close()
     # prop_values = loop.run_until_complete(read_prop_values(app, host))
-
     # pprint(properties)
+
     for key, prop in properties.items():
         if prop['objectType'] == 'device':
             continue

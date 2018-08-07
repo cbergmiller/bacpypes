@@ -101,6 +101,8 @@ class UDPMultiplexer:
 
     def indication(self, server, pdu):
         if DEBUG: _logger.debug('indication %r %r', server, pdu)
+        if not self.protocol:
+            raise RuntimeError('UDPMultiplexer.protocol is not set')
         # check for a broadcast message
         if pdu.pduDestination.addrType == Address.localBroadcastAddr:
             dest = self.addrBroadcastTuple

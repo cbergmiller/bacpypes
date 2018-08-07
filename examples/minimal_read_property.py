@@ -32,6 +32,7 @@ if __name__ == '__main__':
     app = BIPSimpleApplication(this_device, '192.168.2.109')
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
+    loop.run_until_complete(app.create_endoint())
     analog_value = loop.run_until_complete(read_analog_value(app, '192.168.2.70'))
     loop.close()
     print(analog_value)

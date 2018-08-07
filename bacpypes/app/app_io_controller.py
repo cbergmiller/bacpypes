@@ -88,6 +88,7 @@ class ApplicationIOController(IOQController, Application):
             return get_apdu_value(iocb.io_response)
         elif iocb.io_error:
             if throw_on_error:
+                _logger.error('io_error %r', iocb.io_error)
                 raise IOError(str(iocb.io_error))
             return iocb.io_error
 
