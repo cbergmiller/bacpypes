@@ -20,8 +20,8 @@ class BIPForeignApplication(ApplicationIOController, WhoIsIAmServices, ReadWrite
     """
     BIPForeignApplication
     """
-    def __init__(self, local_device, local_address, bbmd_address, bbmd_ttl, aseID=None):
-        ApplicationIOController.__init__(self, local_device, aseID=aseID)
+    def __init__(self, local_device, local_address, bbmd_address, bbmd_ttl, deviceInfoCache=None, aseID=None):
+        ApplicationIOController.__init__(self, local_device, deviceInfoCache, aseID=aseID)
         # local address might be useful for subclasses
         if isinstance(local_address, Address):
             self.localAddress = local_address
