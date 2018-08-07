@@ -21,7 +21,7 @@ class BIPSimpleApplication(ApplicationIOController, WhoIsIAmServices, ReadWriteP
     BIPSimpleApplication
     """
     def __init__(self, local_device, local_address, deviceInfoCache=None, aseID=None):
-        ApplicationIOController.__init__(self, local_device, deviceInfoCache, aseID=aseID)
+        ApplicationIOController.__init__(self, local_device, local_address, deviceInfoCache, aseID=aseID)
         # local address might be useful for subclasses
         if isinstance(local_address, Address):
             self.localAddress = local_address
