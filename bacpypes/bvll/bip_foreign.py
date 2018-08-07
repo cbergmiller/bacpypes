@@ -1,10 +1,11 @@
-
 import logging
 from ..debugging import DebugContents
 from ..task import call_later
 from ..comm import Client, Server
 from ..link import Address, LocalBroadcast, PDU
-from .bvlpdu import DistributeBroadcastToNetwork, ForwardedNPDU, OriginalUnicastNPDU, ReadBroadcastDistributionTableAck, ReadForeignDeviceTableAck, RegisterForeignDevice, Result
+from .bvlpdu import DistributeBroadcastToNetwork, ForwardedNPDU, OriginalUnicastNPDU, ReadBroadcastDistributionTableAck, \
+    ReadForeignDeviceTableAck, RegisterForeignDevice, Result, WriteBroadcastDistributionTable, \
+    ReadBroadcastDistributionTable, ReadForeignDeviceTable, DeleteForeignDeviceTableEntry
 from .bip_sap import BIPSAP
 
 DEBUG = True
@@ -13,7 +14,6 @@ __all__ = ['BIPForeign']
 
 
 class BIPForeign(BIPSAP, Client, Server, DebugContents):
-
     _debug_contents = ('registrationStatus', 'bbmdAddress', 'bbmdTimeToLive')
 
     def __init__(self, addr=None, ttl=None, sapID=None, cid=None, sid=None):
@@ -36,7 +36,6 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
 
     def indication(self, pdu):
         if DEBUG: _logger.debug('indication %r', pdu)
-
         # check for local stations
         if pdu.pduDestination.addrType == Address.localStationAddr:
             # make an original unicast PDU
@@ -44,6 +43,7 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             xpdu.pduDestination = pdu.pduDestination
             # send it downstream
             self.request(xpdu)
+
         # check for broadcasts
         elif pdu.pduDestination.addrType == Address.localBroadcastAddr:
             # check the BBMD registration status, we may not be registered
