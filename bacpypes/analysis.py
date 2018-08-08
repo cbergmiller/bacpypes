@@ -21,7 +21,7 @@ try:
 except:
     pass
 
-from .debugging import ModuleLogger, DebugContents, btox
+from .debugging import btox, xtob
 
 from .link import PDU, Address
 from .bvll import BVLPDU, bvl_pdu_types, ForwardedNPDU, \
@@ -119,6 +119,8 @@ def decode_packet(data):
 
     # assume it is ethernet for now
     d = decode_ethernet(data)
+    pduSource = Address(d['source_address'])
+    pduDestination = Address(d['destination_address'])
     data = d['data']
     # there could be a VLAN header
     if (d['type'] == 0x8100):
@@ -142,10 +144,8 @@ def decode_packet(data):
                 _logger.debug("    - pduDestination: %r", pduDestination)
         else:
             if DEBUG: _logger.debug("    - not a UDP packet")
-            return None
     else:
         if DEBUG: _logger.debug("    - not an IP packet")
-        return None
     # check for empty
     if not data:
         if DEBUG: _logger.debug("    - empty packet")
@@ -318,7 +318,7 @@ def decode_file(fname):
         yield pkt
 
 
-class Tracer(DebugContents):
+class Tracer:
 
     def __init__(self, initial_state=None):
         if DEBUG: _logger.debug("__init__ initial_state=%r", initial_state)
