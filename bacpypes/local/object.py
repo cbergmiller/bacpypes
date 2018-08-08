@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-
-from ..debugging import bacpypes_debugging, ModuleLogger
+import logging
 
 from ..basetypes import PropertyIdentifier
 from ..constructeddata import ArrayOf
@@ -10,7 +9,7 @@ from ..object import Property, Object
 
 # some debugging
 _debug = 0
-_log = ModuleLogger(globals())
+_log = logging.getLogger(__name__)
 
 # handy reference
 ArrayOfPropertyIdentifier = ArrayOf(PropertyIdentifier)
@@ -19,22 +18,21 @@ ArrayOfPropertyIdentifier = ArrayOf(PropertyIdentifier)
 #   CurrentPropertyList
 #
 
-@bacpypes_debugging
 class CurrentPropertyList(Property):
 
     def __init__(self):
-        if _debug: CurrentPropertyList._debug("__init__")
+        if _debug: _log.debug("__init__")
         Property.__init__(self, 'propertyList', ArrayOfPropertyIdentifier, default=None, optional=True, mutable=False)
 
     def ReadProperty(self, obj, arrayIndex=None):
-        if _debug: CurrentPropertyList._debug("ReadProperty %r %r", obj, arrayIndex)
+        if _debug: _log.debug("ReadProperty %r %r", obj, arrayIndex)
 
         # make a list of the properties that have values
         property_list = [k for k, v in obj._values.items()
             if v is not None
                 and k not in ('objectName', 'objectType', 'objectIdentifier', 'propertyList')
             ]
-        if _debug: CurrentPropertyList._debug("    - property_list: %r", property_list)
+        if _debug: _log.debug("    - property_list: %r", property_list)
 
         # sort the list so it's stable
         property_list.sort()
@@ -58,8 +56,6 @@ class CurrentPropertyList(Property):
 #
 #   CurrentPropertyListMixIn
 #
-
-@bacpypes_debugging
 class CurrentPropertyListMixIn(Object):
 
     properties = [

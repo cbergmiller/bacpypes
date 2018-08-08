@@ -15,50 +15,17 @@ from ..object import Property, Object, PropertyError
 DEBUG = True
 _logger = logging.getLogger(__name__)
 __all__ = [
-    'CurrentPropertyList', 'CurrentPropertyListMixIn', 'ReadWritePropertyServices', 'read_property_to_any',
-    'read_property_to_result_element', 'ReadWritePropertyMultipleServices'
+    'ReadWritePropertyServices', 'read_property_to_any', 'read_property_to_result_element',
+    'ReadWritePropertyMultipleServices'
 ]
 # handy reference
 ArrayOfPropertyIdentifier = ArrayOf(PropertyIdentifier)
 
 
-class CurrentPropertyList(Property):
-
-    def __init__(self):
-        if DEBUG: _logger.debug("__init__")
-        Property.__init__(self, 'propertyList', ArrayOfPropertyIdentifier, default=None, optional=True, mutable=False)
-
-    def ReadProperty(self, obj, arrayIndex=None):
-        if DEBUG: _logger.debug("ReadProperty %r %r", obj, arrayIndex)
-        # make a list of the properties that have values
-        property_list = [k for k, v in obj._values.items() if v is not None and k not in (
-            'objectName', 'objectType', 'objectIdentifier', 'propertyList')]
-        if DEBUG: _logger.debug("    - property_list: %r", property_list)
-        # sort the list so it's stable
-        property_list.sort()
-        # asking for the whole thing
-        if arrayIndex is None:
-            return ArrayOfPropertyIdentifier(property_list)
-        # asking for the length
-        if arrayIndex == 0:
-            return len(property_list)
-        # asking for an index
-        if arrayIndex > len(property_list):
-            raise ExecutionError(errorClass='property', errorCode='invalidArrayIndex')
-        return property_list[arrayIndex - 1]
-
-    def WriteProperty(self, obj, value, arrayIndex=None, priority=None, direct=False):
-        raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
-
-
-class CurrentPropertyListMixIn(Object):
-    properties = [
-        CurrentPropertyList(),
-    ]
-
-
 class ReadWritePropertyServices(Capability):
-
+    """
+    ReadProperty and WriteProperty Services
+    """
     def __init__(self):
         if DEBUG: _logger.debug("__init__")
         Capability.__init__(self)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from ..debugging import bacpypes_debugging, ModuleLogger
+import logging
 
 from ..primitivedata import Date, Time, ObjectIdentifier
 from ..constructeddata import ArrayOf
@@ -13,13 +13,12 @@ from ..object import register_object_type, registered_object_types, \
 from .object import CurrentPropertyListMixIn
 
 # some debugging
-_debug = 0
-_log = ModuleLogger(globals())
+DEBUG = 0
+_log = logging.getLogger(__name__)
 
 #
 #   CurrentLocalDate
 #
-
 class CurrentLocalDate(Property):
 
     def __init__(self):
@@ -40,6 +39,7 @@ class CurrentLocalDate(Property):
 #
 #   CurrentLocalTime
 #
+
 
 class CurrentLocalTime(Property):
 
@@ -62,15 +62,15 @@ class CurrentLocalTime(Property):
 #   CurrentProtocolServicesSupported
 #
 
-@bacpypes_debugging
+
 class CurrentProtocolServicesSupported(Property):
 
     def __init__(self):
-        if _debug: CurrentProtocolServicesSupported._debug("__init__")
+        if DEBUG: _log.debug("__init__")
         Property.__init__(self, 'protocolServicesSupported', ServicesSupported, default=None, optional=True, mutable=False)
 
     def ReadProperty(self, obj, arrayIndex=None):
-        if _debug: CurrentProtocolServicesSupported._debug("ReadProperty %r %r", obj, arrayIndex)
+        if DEBUG: _log.debug("ReadProperty %r %r", obj, arrayIndex)
 
         # not an array
         if arrayIndex is not None:
@@ -86,7 +86,7 @@ class CurrentProtocolServicesSupported(Property):
 #   LocalDeviceObject
 #
 
-@bacpypes_debugging
+
 class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
 
     properties = [
@@ -105,7 +105,7 @@ class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
         }
 
     def __init__(self, **kwargs):
-        if _debug: LocalDeviceObject._debug("__init__ %r", kwargs)
+        if DEBUG: _log.debug("__init__ %r", kwargs)
 
         # fill in default property values not in kwargs
         for attr, value in LocalDeviceObject.defaultProperties.items():
@@ -150,7 +150,7 @@ class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
             raise ValueError("invalid max APDU length accepted")
 
         # dump the updated attributes
-        if _debug: LocalDeviceObject._debug("    - updated kwargs: %r", kwargs)
+        if DEBUG: _log.debug("    - updated kwargs: %r", kwargs)
 
         # proceed as usual
         super(LocalDeviceObject, self).__init__(**kwargs)

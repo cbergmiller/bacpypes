@@ -3,112 +3,13 @@
 import logging
 from ..comm import Capability
 from ..link import GlobalBroadcast
-from ..primitivedata import Date, Time, ObjectIdentifier
-from ..constructeddata import ArrayOf
 from ..apdu import WhoIsRequest, IAmRequest, IHaveRequest, SimpleAckPDU
 from ..errors import ExecutionError, InconsistentParameters, \
     MissingRequiredParameter, ParameterOutOfRange
-from ..object import register_object_type, registered_object_types, \
-    Property, DeviceObject
 from ..task import call_later
-from .object import CurrentPropertyListMixIn
 
 _logger = logging.getLogger(__name__)
-__all__ = [
-    'CurrentDateProperty', 'CurrentTimeProperty', 'LocalDeviceObject', 'WhoIsIAmServices', 'WhoHasIHaveServices',
-    'DeviceCommunicationControlServices',
-]
-
-
-class CurrentDateProperty(Property):
-
-    def __init__(self, identifier):
-        Property.__init__(self, identifier, Date, default=(), optional=True, mutable=False)
-
-    def ReadProperty(self, obj, arrayIndex=None):
-        # access an array
-        if arrayIndex is not None:
-            raise TypeError(f"{self.identifier} is unsubscriptable")
-        # get the value
-        now = Date()
-        now.now()
-        return now.value
-
-    def WriteProperty(self, obj, value, arrayIndex=None, priority=None, direct=False):
-        raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
-
-
-class CurrentTimeProperty(Property):
-
-    def __init__(self, identifier):
-        Property.__init__(self, identifier, Time, default=(), optional=True, mutable=False)
-
-    def ReadProperty(self, obj, arrayIndex=None):
-        # access an array
-        if arrayIndex is not None:
-            raise TypeError(f"{self.identifier} is unsubscriptable")
-        # get the value
-        now = Time()
-        now.now()
-        return now.value
-
-    def WriteProperty(self, obj, value, arrayIndex=None, priority=None, direct=False):
-        raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
-
-
-class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
-    properties = \
-        [CurrentTimeProperty('localTime')
-            , CurrentDateProperty('localDate')
-         ]
-
-    defaultProperties = \
-        {'maxApduLengthAccepted': 1024
-            , 'segmentationSupported': 'segmentedBoth'
-            , 'maxSegmentsAccepted': 16
-            , 'apduSegmentTimeout': 5000
-            , 'apduTimeout': 3000
-            , 'numberOfApduRetries': 3
-         }
-
-    def __init__(self, **kwargs):
-        _logger.debug("__init__ %r", kwargs)
-        # fill in default property values not in kwargs
-        for attr, value in LocalDeviceObject.defaultProperties.items():
-            if attr not in kwargs:
-                kwargs[attr] = value
-        for key, value in kwargs.items():
-            if key.startswith("_"):
-                setattr(self, key, value)
-                del kwargs[key]
-        # check for registration
-        if self.__class__ not in registered_object_types.values():
-            if 'vendorIdentifier' not in kwargs:
-                raise RuntimeError("vendorIdentifier required to auto-register the LocalDeviceObject class")
-            register_object_type(self.__class__, vendor_id=kwargs['vendorIdentifier'])
-        # check for local time
-        if 'localDate' in kwargs:
-            raise RuntimeError("localDate is provided by LocalDeviceObject and cannot be overridden")
-        if 'localTime' in kwargs:
-            raise RuntimeError("localTime is provided by LocalDeviceObject and cannot be overridden")
-        # the object identifier is required for the object list
-        if 'objectIdentifier' not in kwargs:
-            raise RuntimeError("objectIdentifier is required")
-        # coerce the object identifier
-        object_identifier = kwargs['objectIdentifier']
-        if isinstance(object_identifier, int):
-            object_identifier = ('device', object_identifier)
-        # the object list is provided
-        if 'objectList' in kwargs:
-            raise RuntimeError("objectList is provided by LocalDeviceObject and cannot be overridden")
-        kwargs['objectList'] = ArrayOf(ObjectIdentifier)([object_identifier])
-        # check for a minimum value
-        if kwargs['maxApduLengthAccepted'] < 50:
-            raise ValueError("invalid max APDU length accepted")
-        # dump the updated attributes
-        _logger.debug("    - updated kwargs: %r", kwargs)
-        # proceed as usual
-        super(LocalDeviceObject, self).__init__(**kwargs)
+__all__ = ['WhoIsIAmServices', 'WhoHasIHaveServices', 'DeviceCommunicationControlServices']
 
 
 class WhoIsIAmServices(Capability):

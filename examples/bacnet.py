@@ -7,21 +7,15 @@ This application has a static list of points that it would like to read.  It rea
 values of each of them in turn and then quits.
 """
 
-from pprint import pprint
 import logging
 import asyncio
 
-from bacpypes.comm import IOCB
 from bacpypes.link import Address
-from bacpypes.object import get_datatype
 from bacpypes.debugging import LoggingFormatter
-from bacpypes.apdu import ReadPropertyRequest, ReadPropertyMultipleRequest, ReadAccessSpecification, PropertyReference, \
-    ReadPropertyACK
-from bacpypes.primitivedata import Unsigned
-from bacpypes.constructeddata import Array
+from bacpypes.apdu import ReadPropertyRequest, ReadPropertyMultipleRequest, ReadAccessSpecification, PropertyReference
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
 _logger.setLevel(logging.DEBUG)

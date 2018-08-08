@@ -121,6 +121,7 @@ class Sequence(object):
             raise TypeError("TagList expected")
         for element in self.sequenceElements:
             tag = taglist.Peek()
+            if DEBUG: _logger.debug("    - element, tag: %r, %r", element, tag)
             # no more elements
             if tag is None:
                 if element.optional:
@@ -163,6 +164,23 @@ class Sequence(object):
                     if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                         raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
             # check for an atomic element
+            elif issubclass(element.klass, AnyAtomic):
+                # convert it to application encoding
+                if element.context is not None:
+                    raise InvalidTag("%s any atomic with context tag %d" % (element.name, element.context))
+                if tag.tagClass != Tag.applicationTagClass:
+                    if not element.optional:
+                        raise InvalidParameterDatatype("%s expected any atomic application tag" % (element.name,))
+                    else:
+                        setattr(self, element.name, None)
+                        continue
+                # consume the tag
+                taglist.Pop()
+                # a helper cooperates between the atomic value and the tag
+                helper = element.klass(tag)
+                # now save the value
+                setattr(self, element.name, helper.value)
+            # check for specific kind of atomic element, or the context says what kind
             elif issubclass(element.cls, Atomic):
                 # convert it to application encoding
                 if element.context is not None:
@@ -354,6 +372,9 @@ def SequenceOf(cls):
 
         def __getitem__(self, item):
             return self.value[item]
+
+        def __iter__(self):
+            return iter(self.value)
 
         def encode(self, taglist):
             if DEBUG: _logger.debug("(%r)encode %r", self.__class__.__name__, taglist)
@@ -673,6 +694,9 @@ def ArrayOf(cls):
             # delete the item and update the length
             del self.value[item]
             self.value[0] -= 1
+
+        def __iter__(self):
+            return iter(self.value[1:])
 
         def index(self, value):
             # only search through values
@@ -1166,8 +1190,13 @@ class AnyAtomic:
         # get the data
         self.value = tag.app_to_object()
 
+    @classmethod
+    def is_valid(cls, arg):
+        """Return True if arg is valid value for the class."""
+        return isinstance(arg, Atomic) and not isinstance(arg, AnyAtomic)
+
     def __str__(self):
-        return f'AnyAtomic({self.value})'
+        return "%s(%s)" % (self.__class__.__name__, str(self.value))
 
     def __repr__(self):
         desc = f'{self.__module__}.{self.__class__.__name__}'

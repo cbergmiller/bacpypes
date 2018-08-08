@@ -185,6 +185,12 @@ class Property:
                         self.identifier,
                     ))
             # if it's atomic, make sure it's valid
+            elif issubclass(self.datatype, AnyAtomic):
+                if DEBUG: _logger.debug("    - property is any atomic, checking value")
+                if not isinstance(value, Atomic):
+                    raise InvalidParameterDatatype("%s must be an atomic instance" % (
+                        self.identifier,
+                    ))
             elif issubclass(self.datatype, Atomic):
                 if DEBUG: _logger.debug("    - property is atomic, checking value")
                 if not self.datatype.is_valid(value):
