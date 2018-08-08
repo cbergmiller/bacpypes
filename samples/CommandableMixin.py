@@ -27,7 +27,7 @@ from bacpypes.object import Property, ReadableProperty, WritableProperty, \
 
 from bacpypes.app import BIPSimpleApplication
 from bacpypes.service.object import CurrentPropertyListMixIn
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

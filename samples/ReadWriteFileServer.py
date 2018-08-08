@@ -15,7 +15,7 @@ from bacpypes.consolelogging import ConfigArgumentParser
 from bacpypes.core import run
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 from bacpypes.service.file import FileServices, \
     LocalRecordAccessFileObject, LocalStreamAccessFileObject
 

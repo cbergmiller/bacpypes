@@ -23,7 +23,7 @@ from bacpypes.primitivedata import Unsigned, CharacterString
 from bacpypes.constructeddata import Array, ArrayOf, Any
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

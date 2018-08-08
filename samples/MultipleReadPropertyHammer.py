@@ -31,7 +31,7 @@ from bacpypes.bvllservice import BIPSimple, AnnexJCodec, UDPMultiplexer
 
 from bacpypes.apdu import ReadPropertyRequest
 
-from bacpypes.service.device import LocalDeviceObject, WhoIsIAmServices
+from bacpypes.local.device import LocalDeviceObject, WhoIsIAmServices
 from bacpypes.service.object import ReadWritePropertyServices
 
 

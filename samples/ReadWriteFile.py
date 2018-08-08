@@ -31,7 +31,7 @@ from bacpypes.apdu import Error, AbortPDU, \
     AtomicWriteFileACK
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

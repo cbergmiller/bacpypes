@@ -19,7 +19,7 @@ from bacpypes.iocb import IOCB
 
 from bacpypes.pdu import Address
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 from bacpypes.primitivedata import TagList, OpeningTag, ClosingTag, ContextTag
 from bacpypes.constructeddata import Any

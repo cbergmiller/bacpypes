@@ -20,7 +20,7 @@ from bacpypes.object import get_object_class, get_datatype
 from bacpypes.apdu import ReadRangeRequest, ReadRangeACK
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

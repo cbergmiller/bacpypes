@@ -23,7 +23,7 @@ from bacpypes.constructeddata import Array
 
 from bacpypes.app import BIPSimpleApplication
 from bacpypes.object import get_object_class, get_datatype
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

@@ -22,7 +22,7 @@ from bacpypes.object import AnalogValueObject, Property, register_object_type
 from bacpypes.errors import ExecutionError
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

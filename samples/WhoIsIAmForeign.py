@@ -31,7 +31,7 @@ from bacpypes.basetypes import ServicesSupported
 from bacpypes.errors import DecodingError
 
 from bacpypes.app import BIPForeignApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

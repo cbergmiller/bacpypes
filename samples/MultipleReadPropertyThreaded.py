@@ -24,7 +24,7 @@ from bacpypes.primitivedata import Unsigned
 from bacpypes.constructeddata import Array
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 # some debugging
 _debug = 0

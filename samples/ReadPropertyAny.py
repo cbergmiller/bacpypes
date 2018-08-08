@@ -23,7 +23,7 @@ from bacpypes.apdu import ReadPropertyRequest, Error, AbortPDU, ReadPropertyACK
 from bacpypes.primitivedata import Tag
 
 from bacpypes.app import BIPSimpleApplication
-from bacpypes.service.device import LocalDeviceObject
+from bacpypes.local.device import LocalDeviceObject
 
 
 # some debugging
