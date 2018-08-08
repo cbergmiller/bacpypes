@@ -1,6 +1,6 @@
 
 import logging
-from copy import copy as _copy
+from copy import deepcopy as _deepcopy
 
 from .netservice import NetworkAdapter, RouterReference
 from ..debugging import DebugContents
@@ -259,7 +259,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
             if processLocally and self.serverPeer:
                 # decode as a generic APDU
                 apdu = _APDU(user_data=npdu.pduUserData)
-                apdu.decode(_copy(npdu))
+                apdu.decode(_deepcopy(npdu))
                 if DEBUG: _logger.debug('    - apdu: %r', apdu)
                 # see if it needs to look routed
                 if (len(self.adapters) > 1) and (adapter != self.localAdapter):
@@ -302,7 +302,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
                     return
                 # do a deeper decode of the NPDU
                 xpdu = npdu_types[npdu.npduNetMessage](user_data=npdu.pduUserData)
-                xpdu.decode(_copy(npdu))
+                xpdu.decode(_deepcopy(npdu))
                 # pass to the service element
                 self.sap_request(adapter, xpdu)
             if not forwardMessage:
@@ -314,7 +314,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
         if npdu.npduHopCount == 0:
             return
         # build a new NPDU to send to other adapters
-        newpdu = _copy(npdu)
+        newpdu = _deepcopy(npdu)
         # clear out the source and destination
         newpdu.pduSource = None
         newpdu.pduDestination = None
@@ -346,7 +346,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
                     # last leg in routing
                     newpdu.npduDADR = None
                     # send the packet downstream
-                    xadapter.process_npdu(_copy(newpdu))
+                    xadapter.process_npdu(_deepcopy(newpdu))
                     return
             # see if we know how to get there
             if dnet in self.networks:
@@ -356,7 +356,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
                 ### check to make sure the network is OK, may need to connect
                 if DEBUG: _logger.debug('    - newpdu: %r', newpdu)
                 # send the packet downstream
-                rref.adapter.process_npdu(_copy(newpdu))
+                rref.adapter.process_npdu(_deepcopy(newpdu))
                 return
             ### queue this message for reprocessing when the response comes back
             # try to find a path to the network
