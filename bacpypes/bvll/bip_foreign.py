@@ -82,6 +82,7 @@ class BIPForeign(BIPSAP, Client, Server, DebugContents):
             xpdu = PDU(pdu.pduData, source=pdu.pduSource, destination=pdu.pduDestination, user_data=pdu.pduUserData)
             # send it upstream
             self.response(xpdu)
+            return
         # check the BBMD registration status, we may not be registered
         if self.registrationStatus != 0:
             if DEBUG: _logger.debug('    - packet dropped, unregistered')
