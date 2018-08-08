@@ -25,6 +25,8 @@ class Network:
         self.nodes = []
         self.broadcast_address = broadcast_address
         self.drop_percent = drop_percent
+        # point to a TrafficLog instance
+        self.traffic_log = None
 
     def add_node(self, node):
         """ Add a node to this network, let the node know which network it's on."""
@@ -46,6 +48,9 @@ class Network:
         Process a PDU by sending a copy to each node as dictated by the addressing and if a node is promiscuous.
         """
         _logger.debug('process_pdu(%s) %r', self.name, pdu)
+        # if there is a traffic log, call it with the network name and pdu
+        if self.traffic_log:
+            self.traffic_log(self.name, pdu)
         # randomly drop a packet
         if self.drop_percent != 0.0:
             if (random.random() * 100.0) < self.drop_percent:
