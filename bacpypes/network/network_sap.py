@@ -260,7 +260,6 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
                 # decode as a generic APDU
                 apdu = _APDU(user_data=npdu.pduUserData)
                 apdu.decode(_deepcopy(npdu))
-                if DEBUG: _logger.debug('    - apdu: %r', apdu)
                 # see if it needs to look routed
                 if (len(self.adapters) > 1) and (adapter != self.localAdapter):
                     # combine the source address
