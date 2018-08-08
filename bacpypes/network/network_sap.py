@@ -346,7 +346,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
                     # last leg in routing
                     newpdu.npduDADR = None
                     # send the packet downstream
-                    xadapter.process_npdu(newpdu)
+                    xadapter.process_npdu(_copy(newpdu))
                     return
             # see if we know how to get there
             if dnet in self.networks:
@@ -356,7 +356,7 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
                 ### check to make sure the network is OK, may need to connect
                 if DEBUG: _logger.debug('    - newpdu: %r', newpdu)
                 # send the packet downstream
-                rref.adapter.process_npdu(newpdu)
+                rref.adapter.process_npdu(_copy(newpdu))
                 return
             ### queue this message for reprocessing when the response comes back
             # try to find a path to the network
