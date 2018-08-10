@@ -16,9 +16,7 @@ from .object import CurrentPropertyListMixIn
 DEBUG = 0
 _log = logging.getLogger(__name__)
 
-#
-#   CurrentLocalDate
-#
+
 class CurrentLocalDate(Property):
 
     def __init__(self):
@@ -35,10 +33,6 @@ class CurrentLocalDate(Property):
 
     def WriteProperty(self, obj, value, arrayIndex=None, priority=None, direct=False):
         raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
-
-#
-#   CurrentLocalTime
-#
 
 
 class CurrentLocalTime(Property):
@@ -57,10 +51,6 @@ class CurrentLocalTime(Property):
 
     def WriteProperty(self, obj, value, arrayIndex=None, priority=None, direct=False):
         raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
-
-#
-#   CurrentProtocolServicesSupported
-#
 
 
 class CurrentProtocolServicesSupported(Property):
@@ -82,10 +72,6 @@ class CurrentProtocolServicesSupported(Property):
     def WriteProperty(self, obj, value, arrayIndex=None, priority=None, direct=False):
         raise ExecutionError(errorClass='property', errorCode='writeAccessDenied')
 
-#
-#   LocalDeviceObject
-#
-
 
 class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
 
@@ -93,16 +79,16 @@ class LocalDeviceObject(CurrentPropertyListMixIn, DeviceObject):
         CurrentLocalTime(),
         CurrentLocalDate(),
         CurrentProtocolServicesSupported(),
-        ]
+    ]
 
-    defaultProperties = \
-        { 'maxApduLengthAccepted': 1024
-        , 'segmentationSupported': 'segmentedBoth'
-        , 'maxSegmentsAccepted': 16
-        , 'apduSegmentTimeout': 5000
-        , 'apduTimeout': 3000
-        , 'numberOfApduRetries': 3
-        }
+    defaultProperties = {
+        'maxApduLengthAccepted': 1024,
+        'segmentationSupported': 'segmentedBoth',
+        'maxSegmentsAccepted': 16,
+        'apduSegmentTimeout': 5000,
+        'apduTimeout': 3000,
+        'numberOfApduRetries': 3,
+    }
 
     def __init__(self, **kwargs):
         if DEBUG: _log.debug("__init__ %r", kwargs)

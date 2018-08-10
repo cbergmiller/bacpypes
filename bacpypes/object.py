@@ -97,7 +97,7 @@ def register_object_type(cls=None, vendor_id=0):
 def get_object_class(object_type, vendor_id=0):
     """Return the class associated with an object type."""
     if DEBUG: _logger.debug("get_object_class %r vendor_id=%r", object_type, vendor_id)
-    # find the klass as given
+    # find the class as given
     cls = registered_object_types.get((object_type, vendor_id))
     if DEBUG: _logger.debug("    - direct lookup: %s", repr(cls))
     # if the class isn't found and the vendor id is non-zero, try the standard class for the type
@@ -516,12 +516,12 @@ class Object:
         # make/extend the dictionary of content
         if use_dict is None:
             use_dict = as_class()
-        klasses = list(self.__class__.__mro__)
-        klasses.reverse()
+        classes = list(self.__class__.__mro__)
+        classes.reverse()
         # build a list of property identifiers "bottom up"
         property_names = []
         properties_seen = set()
-        for c in klasses:
+        for c in classes:
             for prop in getattr(c, 'properties', []):
                 if prop.identifier not in properties_seen:
                     property_names.append(prop.identifier)
@@ -542,11 +542,11 @@ class Object:
 
     def debug_contents(self, indent=1, file=sys.stdout, _ids=None):
         """Print out interesting things about the object."""
-        klasses = list(self.__class__.__mro__)
-        klasses.reverse()
+        classes = list(self.__class__.__mro__)
+        classes.reverse()
         # print special attributes "bottom up"
         previous_attrs = ()
-        for c in klasses:
+        for c in classes:
             attrs = getattr(c, '_debug_contents', ())
             # if we have seen this list already, move to the next class
             if attrs is previous_attrs:
@@ -557,7 +557,7 @@ class Object:
         # build a list of property identifiers "bottom up"
         property_names = []
         properties_seen = set()
-        for c in klasses:
+        for c in classes:
             for prop in getattr(c, 'properties', []):
                 if prop.identifier not in properties_seen:
                     property_names.append(prop.identifier)

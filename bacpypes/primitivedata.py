@@ -184,11 +184,11 @@ class Tag(object):
         if self.tagClass != Tag.applicationTagClass:
             raise ValueError("application tag required")
         # get the class to build
-        klass = self._app_tag_class[self.tagNumber]
-        if not klass:
+        cls = self._app_tag_class[self.tagNumber]
+        if not cls:
             return None
         # build an object, tell it to decode this tag, and return it
-        return klass(self)
+        return cls(self)
 
     def __repr__(self):
         sname = self.__module__ + '.' + self.__class__.__name__

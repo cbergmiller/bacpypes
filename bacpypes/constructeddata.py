@@ -164,7 +164,8 @@ class Sequence(object):
                     if tag.tagClass != Tag.closingTagClass or tag.tagNumber != element.context:
                         raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
             # check for an atomic element
-            elif issubclass(element.klass, AnyAtomic):
+
+            elif issubclass(element.cls, AnyAtomic):
                 # convert it to application encoding
                 if element.context is not None:
                     raise InvalidTag("%s any atomic with context tag %d" % (element.name, element.context))
@@ -177,7 +178,7 @@ class Sequence(object):
                 # consume the tag
                 taglist.Pop()
                 # a helper cooperates between the atomic value and the tag
-                helper = element.klass(tag)
+                helper = element.cls(tag)
                 # now save the value
                 setattr(self, element.name, helper.value)
             # check for specific kind of atomic element, or the context says what kind
@@ -302,7 +303,7 @@ class Sequence(object):
             value = getattr(self, element.name, None)
             if value is None:
                 continue
-            if (element.klass in _sequence_of_classes) or (element.klass in _list_of_classes):
+            if (element.cls in _sequence_of_classes) or (element.cls in _list_of_classes):
                 helper = element.cls(value)
                 mapped_value = helper.dict_contents(as_class=as_class)
             elif issubclass(element.cls, Atomic):

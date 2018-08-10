@@ -18,9 +18,9 @@ from bacpypes.app import BIPSimpleApplication
 from bacpypes.local.device import LocalDeviceObject
 
 _logger = logging.getLogger('bacpypes')
-_logger.setLevel(logging.DEBUG)
+_logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 ch.setFormatter(LoggingFormatter('%(name)s - %(levelname)s - %(message)s'))
 _logger.addHandler(ch)
 
