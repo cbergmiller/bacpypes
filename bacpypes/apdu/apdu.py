@@ -1092,7 +1092,7 @@ class LifeSafetyOperationRequest(ConfirmedRequestSequence):
         Element('requestingProcessIdentifier', Unsigned, 0),
         Element('requestingSource', CharacterString, 1),
         Element('request', LifeSafetyOperation, 2),
-        Element('objectIdentifier', ObjectIdentifier, 3),
+        Element('objectIdentifier', ObjectIdentifier, 3, True),
     ]
 
 
@@ -1270,7 +1270,7 @@ class RemoveListElementRequest(ConfirmedRequestSequence):
     sequenceElements = [
         Element('objectIdentifier', ObjectIdentifier, 0),
         Element('propertyIdentifier', PropertyIdentifier, 1),
-        Element('propertyArrayIndex', Unsigned, 2),
+        Element('propertyArrayIndex', Unsigned, 2, True),
         Element('listOfElements', Any, 3),
     ]
 

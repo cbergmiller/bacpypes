@@ -267,7 +267,7 @@ class Sequence(object):
                         raise InvalidTag("%s expected closing tag %d" % (element.name, element.context))
 
     def debug_contents(self, indent=1, file=sys.stdout, _ids=None):
-        global _sequence_of_classes
+        global _sequence_of_classes, _list_of_classes
         for element in self.sequenceElements:
             value = getattr(self, element.name, None)
             if element.optional and value is None:
