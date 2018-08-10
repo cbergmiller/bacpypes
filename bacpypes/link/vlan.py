@@ -122,9 +122,9 @@ class IPNetwork(Network):
     ('1.2.3.255', 5) and the other nodes must have the same tuple.
     """
 
-    def __init__(self):
+    def __init__(self, name=''):
         _logger.debug('__init__')
-        Network.__init__(self)
+        Network.__init__(self, name=name)
 
     def add_node(self, node):
         _logger.debug('add_node %r', node)
@@ -158,7 +158,7 @@ class IPNode(Node):
 
 class IPRouterNode(Client):
 
-    def __init__(self, router, addr, lan=None):
+    def __init__(self, router, addr, lan):
         _logger.debug('__init__ %r %r lan=%r', router, addr, lan)
         # save the reference to the router
         self.router = router
@@ -177,6 +177,9 @@ class IPRouterNode(Client):
         _logger.debug('process_pdu %r', pdu)
         # pass it downstream
         self.request(pdu)
+
+    def __repr__(self):
+        return "<%s for %s>" % (self.__class__.__name__, self.lan.name)
 
 
 class IPRouter:
