@@ -8,10 +8,11 @@ import logging
 from ..comm import ServiceAccessPoint, ApplicationServiceElement
 from ..apdu import AbortPDU, ComplexAckPDU, ConfirmedRequestPDU, Error, ErrorPDU, RejectPDU, SimpleAckPDU, \
     UnconfirmedRequestPDU, unconfirmed_request_types, confirmed_request_types, complex_ack_types, error_types
-from ..errors import RejectException, AbortException
+from ..errors import RejectException, AbortException, UnrecognizedService
 
 _logger = logging.getLogger(__name__)
 __all__ = ['ApplicationServiceAccessPoint']
+_debug = False
 
 
 class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoint):
@@ -24,25 +25,39 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
         ServiceAccessPoint.__init__(self, sapID)
 
     def indication(self, apdu):
+        # assume no errors found
+        error_found = None
+        # look up the class associated with the service
         if isinstance(apdu, ConfirmedRequestPDU):
             atype = confirmed_request_types.get(apdu.apduService)
             if not atype:
                 # no confirmed request decoder
-                return
-            # assume no errors found
-            error_found = None
-            try:
-                xpdu = atype()
-                xpdu.decode(apdu)
-            except (RejectException, AbortException) as err:
-                error_found = err
-            else:
+                error_found = UnrecognizedService()
                 # no error so far, keep going
-                try:
-                    # forward the decoded packet
-                    self.sap_request(xpdu)
-                except (RejectException, AbortException) as err:
-                    error_found = err
+                if not error_found:
+                    try:
+                        xpdu = atype()
+                        xpdu.decode(apdu)
+                    except RejectException as err:
+                        _logger.debug("    - decoding reject: %r", err)
+                        error_found = err
+                    except AbortException as err:
+                        _logger.debug("    - decoding abort: %r", err)
+                        error_found = err
+
+                # no error so far, keep going
+                if not error_found:
+                    if _debug: _logger.debug("    - no decoding error")
+
+                    try:
+                        # forward the decoded packet
+                        self.sap_request(xpdu)
+                    except RejectException as err:
+                        _logger.debug("    - execution reject: %r", err)
+                        error_found = err
+                    except AbortException as err:
+                        _logger.debug("    - execution abort: %r", err)
+                        error_found = err
             # if there was an error, send it back to the client
             if isinstance(error_found, RejectException):
                 # reject exception
