@@ -89,7 +89,7 @@ class ApplicationIOController(IOQController, Application):
         elif iocb.io_error:
             if throw_on_error:
                 _logger.error('io_error %r', iocb.io_error)
-                raise IOError(str(iocb.io_error))
+                raise iocb.io_error
             return iocb.io_error
 
     async def execute_requests(self, requests, throw_on_error=False):

@@ -15,11 +15,12 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
     StateMachineAccessPoint
     """
 
-    def __init__(self, local_device=None, device_info_cache=None, sap=None, cid=None):
+    def __init__(self, localDevice=None, device_info_cache=None, sap=None, cid=None):
         # basic initialization
         Client.__init__(self, cid)
         ServiceAccessPoint.__init__(self, sap)
         # save a reference to the device information cache
+        self.localDevice = localDevice
         self.deviceInfoCache = device_info_cache
         # client settings
         self.nextInvokeID = 1
@@ -27,23 +28,17 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
         # server settings
         self.serverTransactions = []
         # confirmed request defaults
-        self.retryCount = 3
-        self.retryTimeout = 3000
+        self.numberOfApduRetries = 3
+        self.apduTimeout = 3000
         self.maxApduLengthAccepted = 1024
         # segmentation defaults
         self.segmentationSupported = 'noSegmentation'
         self.segmentTimeout = 1500
-        self.maxSegmentsAccepted = 8
+        self.maxSegmentsAccepted = 2
+        self.proposedWindowSize = 2
         # device communication control
         self.dccEnableDisable = 'enable'
-        # local device object provides these
-        if local_device:
-            self.retryCount = local_device.numberOfApduRetries
-            self.retryTimeout = local_device.apduTimeout
-            self.segmentationSupported = local_device.segmentationSupported
-            self.segmentTimeout = local_device.apduSegmentTimeout
-            self.maxSegmentsAccepted = local_device.maxSegmentsAccepted
-            self.maxApduLengthAccepted = local_device.maxApduLengthAccepted
+
         # how long the state machine is willing to wait for the application
         # layer to form a response and send it
         self.applicationTimeout = 3000
@@ -58,7 +53,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             if initial_id == self.nextInvokeID:
                 raise RuntimeError('no available invoke ID')
             for tr in self.clientTransactions:
-                if (invoke_id == tr.invokeID) and (addr == tr.remoteDevice.address):
+                if (invoke_id == tr.invokeID) and (addr == tr.pdu_address):
                     break
             else:
                 break
@@ -97,13 +92,13 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
         if isinstance(apdu, ConfirmedRequestPDU):
             # find duplicates of this request
             for tr in self.serverTransactions:
-                if (apdu.pduSource == tr.remoteDevice.address) and (apdu.apduInvokeID == tr.invokeID):
+                if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.pdu_address):
                     break
             else:
                 # find the remote device information
                 remote_device = self.deviceInfoCache.get_device_info(apdu.pduSource)
                 # build a server transaction
-                tr = ServerSSM(self, remote_device)
+                tr = ServerSSM(self, apdu.pduSource)
                 # add it to our transactions to track it
                 self.serverTransactions.append(tr)
             # let it run with the apdu
@@ -117,7 +112,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
                 or isinstance(apdu, RejectPDU):
             # find the client transaction this is acking
             for tr in self.clientTransactions:
-                if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.remoteDevice.address):
+                if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.pdu_address):
                     break
             else:
                 return
@@ -127,7 +122,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             # find the transaction being aborted
             if apdu.apduSrv:
                 for tr in self.clientTransactions:
-                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.remoteDevice.address):
+                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.pdu_address):
                         break
                 else:
                     return
@@ -135,7 +130,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
                 tr.confirmation(apdu)
             else:
                 for tr in self.serverTransactions:
-                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.remoteDevice.address):
+                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.pdu_address):
                         break
                 else:
                     return
@@ -145,7 +140,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             # find the transaction being aborted
             if apdu.apduSrv:
                 for tr in self.clientTransactions:
-                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.remoteDevice.address):
+                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.pdu_address):
                         break
                 else:
                     return
@@ -153,7 +148,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
                 tr.confirmation(apdu)
             else:
                 for tr in self.serverTransactions:
-                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.remoteDevice.address):
+                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduSource == tr.pdu_address):
                         break
                 else:
                     return
@@ -192,7 +187,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             else:
                 # verify the invoke ID isn't already being used
                 for tr in self.clientTransactions:
-                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduDestination == tr.remoteDevice.address):
+                    if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduDestination == tr.pdu_address):
                         raise RuntimeError('invoke ID in use')
             # warning for bogus requests
             if (apdu.pduDestination.addrType != Address.localStationAddr) and (
@@ -201,7 +196,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
             # find the remote device information
             remote_device = self.deviceInfoCache.get_device_info(apdu.pduDestination)
             # create a client transaction state machine
-            tr = ClientSSM(self, remote_device)
+            tr = ClientSSM(self, apdu.pduDestination)
             # add it to our transactions to track it
             self.clientTransactions.append(tr)
             # let it run
@@ -221,7 +216,7 @@ class StateMachineAccessPoint(Client, ServiceAccessPoint):
                 or isinstance(apdu, AbortPDU):
             # find the appropriate server transaction
             for tr in self.serverTransactions:
-                if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduDestination == tr.remoteDevice.address):
+                if (apdu.apduInvokeID == tr.invokeID) and (apdu.pduDestination == tr.pdu_address):
                     break
             else:
                 return

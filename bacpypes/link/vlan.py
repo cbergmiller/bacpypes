@@ -160,8 +160,8 @@ class IPRouterNode(Client):
 
     def __init__(self, router, addr, lan):
         _logger.debug('__init__ %r %r lan=%r', router, addr, lan)
-        # save the reference to the router
-        self.router = router
+        # save the references to the router for packets and the lan for debugging
+        self.lan = lan
         # make ourselves an IPNode and bind to it
         self.node = IPNode(addr, lan=lan, promiscuous=True, spoofing=True)
         bind(self, self.node)

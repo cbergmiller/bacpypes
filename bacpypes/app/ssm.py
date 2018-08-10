@@ -2,7 +2,7 @@
 import logging
 from ..debugging import DebugContents
 from ..task import call_later
-from ..apdu import ComplexAckPDU, ConfirmedRequestPDU
+from ..apdu import ComplexAckPDU, ConfirmedRequestPDU, encode_max_segments_accepted, encode_max_apdu_length_accepted
 from .ssm_states import *
 
 _logger = logging.getLogger(__name__)
@@ -18,10 +18,18 @@ class SSM(DebugContents):
         'SEGMENTED_RESPONSE', 'SEGMENTED_CONFIRMATION', 'COMPLETED', 'ABORTED'
     ]
 
-    def __init__(self, sap, remote_device):
+    _debug_contents = (
+        'ssmSAP', 'localDevice', 'device_info', 'invokeID', 'state', 'segmentAPDU', 'segmentSize', 'segmentCount',
+        'maxSegmentsAccepted', 'retryCount', 'segmentRetryCount', 'sentAllSegments', 'lastSequenceNumber',
+        'initialSequenceNumber', 'actualWindowSize', 'proposedWindowSize'
+    )
+
+    def __init__(self, sap, pdu_address):
         """Common parts for client and server segmentation."""
         self.ssmSAP = sap  # service access point
-        self.remoteDevice = remote_device  # remote device information, a DeviceInfo instance
+        # save the address and get the device information
+        self.pdu_address = pdu_address
+        self.device_info = sap.deviceInfoCache.get_device_info(pdu_address)
         self.invokeID = None  # invoke ID
         self.state = IDLE  # initial state
         self.segmentAPDU = None  # refers to request or response
@@ -33,10 +41,16 @@ class SSM(DebugContents):
         self.lastSequenceNumber = None
         self.initialSequenceNumber = None
         self.actualWindowSize = None
-        self.proposedWindowSize = None
-        # the maximum number of segments starts out being what's in the SAP
-        # which is the defaults or values from the local device.
-        self.maxSegmentsAccepted = self.ssmSAP.maxSegmentsAccepted
+        # local device object provides these or SAP provides defaults, make
+        # copies here so they are consistent throughout the transaction but
+        # they could change from one transaction to the next
+        self.numberOfApduRetries = getattr(sap.localDevice, 'numberOfApduRetries', sap.numberOfApduRetries)
+        self.apduTimeout = getattr(sap.localDevice, 'apduTimeout', sap.apduTimeout)
+
+        self.segmentationSupported = getattr(sap.localDevice, 'segmentationSupported', sap.segmentationSupported)
+        self.segmentTimeout = getattr(sap.localDevice, 'segmentTimeout', sap.segmentTimeout)
+        self.maxSegmentsAccepted = getattr(sap.localDevice, 'maxSegmentsAccepted', sap.maxSegmentsAccepted)
+        self.maxApduLengthAccepted = getattr(sap.localDevice, 'maxApduLengthAccepted', sap.maxApduLengthAccepted)
         self.timer_handle = None
 
     def start_timer(self, msecs):
@@ -95,11 +109,14 @@ class SSM(DebugContents):
 
         if self.segmentAPDU.apduType == ConfirmedRequestPDU.pduType:
             seg_apdu = ConfirmedRequestPDU(self.segmentAPDU.apduService)
-            seg_apdu.apduMaxSegs = self.maxSegmentsAccepted
-            seg_apdu.apduMaxResp = self.ssmSAP.maxApduLengthAccepted
+
+            seg_apdu.apduMaxSegs = encode_max_segments_accepted(self.maxSegmentsAccepted)
+            seg_apdu.apduMaxResp = encode_max_apdu_length_accepted(self.maxApduLengthAccepted)
             seg_apdu.apduInvokeID = self.invokeID
+
             # segmented response accepted?
-            seg_apdu.apduSA = self.ssmSAP.segmentationSupported in ('segmentedReceive', 'segmentedBoth')
+            seg_apdu.apduSA = self.segmentationSupported in ('segmentedReceive', 'segmentedBoth')
+
         elif self.segmentAPDU.apduType == ComplexAckPDU.pduType:
             seg_apdu = ComplexAckPDU(self.segmentAPDU.apduService, self.segmentAPDU.apduInvokeID)
         else:
@@ -107,13 +124,17 @@ class SSM(DebugContents):
         # maintain the the user data reference
         seg_apdu.pduUserData = self.segmentAPDU.pduUserData
         # make sure the destination is set
-        seg_apdu.pduDestination = self.remoteDevice.address
+        seg_apdu.pduDestination = self.pdu_address
         # segmented message?
         if self.segmentCount != 1:
             seg_apdu.apduSeg = True
             seg_apdu.apduMor = (indx < (self.segmentCount - 1))  # more follows
             seg_apdu.apduSeq = indx % 256  # sequence number
-            seg_apdu.apduWin = self.proposedWindowSize  # window size
+            # first segment sends proposed window size, rest get actual
+            if indx == 0:
+                seg_apdu.apduWin = self.proposedWindowSize
+            else:
+                seg_apdu.apduWin = self.actualWindowSize
         else:
             seg_apdu.apduSeg = False
             seg_apdu.apduMor = False
@@ -138,14 +159,16 @@ class SSM(DebugContents):
         rslt = ((seqA - seqB + 256) % 256) < self.actualWindowSize
         return rslt
 
-    def FillWindow(self, seqNum):
-        """
-        This function sends all of the packets necessary to fill out the segmentation window.
-        """
+    def fill_window(self, seqNum):
+        """This function sends all of the packets necessary to fill
+        out the segmentation window."""
+
         for ix in range(self.actualWindowSize):
             apdu = self.get_segment(seqNum + ix)
+
             # send the message
             self.ssmSAP.request(apdu)
+
             # check for no more follows
             if not apdu.apduMor:
                 self.sentAllSegments = True

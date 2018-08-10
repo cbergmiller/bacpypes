@@ -20,6 +20,7 @@ from .registry import *
 
 _logger = logging.getLogger(__name__)
 __all__ = [
+    'encode_max_segments_accepted', 'encode_max_apdu_length_accepted', 'decode_max_segments_accepted', 'decode_max_apdu_length_accepted',
     'APDU', 'ConfirmedRequestPDU', 'UnconfirmedRequestPDU', 'SimpleAckPDU', 'ComplexAckPDU', 'SegmentAckPDU',
     'ErrorPDU', 'RejectReason', 'RejectPDU', 'AbortPDU', 'APCISequence', 'ConfirmedRequestSequence',
     'ComplexAckSequence', 'UnconfirmedRequestSequence', 'ErrorSequence', 'Error', 'ChangeListError',
@@ -32,35 +33,46 @@ __all__ = [
     'AtomicReadFileACKAccessMethodRecordAccess', 'AtomicReadFileACKAccessMethodStreamAccess', 'AtomicWriteFileACK'
 ]
 
-_max_apdu_response_encoding = [
-    50, 128, 206, 480, 1024, 1476, None, None, None, None, None, None, None, None, None, None
-]
+
+_max_segments_accepted_encoding = [None, 2, 4, 8, 16, 32, 64, None]
 
 
 def encode_max_segments_accepted(arg):
-    """Encode the maximum number of segments the device will accept, Section 20.1.2.4"""
-    w = 0
-    while arg and not arg & 1:
-        w += 1
-        arg = (arg >> 1)
-    return w
+    """Encode the maximum number of segments the device will accept, Section
+    20.1.2.4, and if the device says it can only accept one segment it shouldn't
+    say that it supports segmentation!"""
+    # unspecified
+    if not arg:
+        return 0
+    if arg > 64:
+        return 7
+    # the largest number not greater than the arg
+    for i in range(6, 0, -1):
+        if _max_segments_accepted_encoding[i] <= arg:
+            return i
+    raise ValueError("invalid max max segments accepted: {0}".format(arg))
 
 
 def decode_max_segments_accepted(arg):
     """Decode the maximum number of segments the device will accept, Section 20.1.2.4"""
-    return arg and (1 << arg) or None
+    return _max_segments_accepted_encoding[arg]
+
+
+_max_apdu_length_encoding = [
+    50, 128, 206, 480, 1024, 1476, None, None, None, None, None, None, None, None, None, None
+]
 
 
 def encode_max_apdu_length_accepted(arg):
     """Return the encoding of the highest encodable value less than the value of the arg."""
     for i in range(5, -1, -1):
-        if arg >= _max_apdu_response_encoding[i]:
+        if arg >= _max_apdu_length_encoding[i]:
             return i
     raise ValueError(f'invalid max APDU length accepted: {arg}')
 
 
 def decode_max_apdu_length_accepted(arg):
-    v = _max_apdu_response_encoding[arg]
+    v = _max_apdu_length_encoding[arg]
     if not v:
         raise ValueError(f'invalid max APDU length accepted: {arg}')
     return v
@@ -161,8 +173,7 @@ class ConfirmedRequestPDU(_APDU):
         if apci.apduSA:
             buff += 0x02
         pdu.put(buff)
-        pdu.put((encode_max_segments_accepted(apci.apduMaxSegs) << 4) + encode_max_apdu_length_accepted(
-            apci.apduMaxResp))
+        pdu.put((apci.apduMaxSegs << 4) + apci.apduMaxResp)
         pdu.put(apci.apduInvokeID)
         if apci.apduSeg:
             pdu.put(apci.apduSeq)
@@ -175,8 +186,8 @@ class ConfirmedRequestPDU(_APDU):
         apci.apduMor = ((buff & 0x04) != 0)
         apci.apduSA = ((buff & 0x02) != 0)
         buff = pdu.get()
-        apci.apduMaxSegs = decode_max_segments_accepted((buff >> 4) & 0x07)
-        apci.apduMaxResp = decode_max_apdu_length_accepted(buff & 0x0F)
+        apci.apduMaxSegs = (buff >> 4) & 0x07
+        apci.apduMaxResp = buff & 0x0F
         apci.apduInvokeID = pdu.get()
         if apci.apduSeg:
             apci.apduSeq = pdu.get()

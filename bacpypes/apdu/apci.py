@@ -60,13 +60,19 @@ class APCI(PCI):
         return f'<{sname}({stype}) instance at {hex(id(self))}>'
 
     def encode(self, pdu):
-        """encode the contents of the APCI into the PDU."""
+        """
+        Encode the contents of the APCI into the PDU.
+        (Concrete encode methods have been moved to the APDU classes)
+        """
         PCI.update(pdu, self)
         apdu_cls = apdu_types.get(self.apduType)
         apdu_cls.encode_pdu(self, pdu)
 
     def decode(self, pdu):
-        """decode the contents of the PDU into the APCI."""
+        """
+        Decode the contents of the PDU into the APCI.
+        (Concrete decode methods have been moved to the APDU classes)
+        """
         PCI.update(self, pdu)
         # decode the first octet
         buff = pdu.get()
@@ -104,4 +110,3 @@ class APCI(PCI):
         # return what we built/updated
         _logger.info('apci_contents %r', use_dict)
         return use_dict
-
