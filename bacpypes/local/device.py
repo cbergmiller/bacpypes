@@ -15,6 +15,7 @@ from .object import CurrentPropertyListMixIn
 # some debugging
 DEBUG = 0
 _log = logging.getLogger(__name__)
+__all__ = ['LocalDeviceObject']
 
 
 class CurrentLocalDate(Property):

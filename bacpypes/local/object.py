@@ -10,6 +10,8 @@ from ..object import Property, Object
 # some debugging
 _debug = 0
 _log = logging.getLogger(__name__)
+__all__ = ['CurrentPropertyList', 'CurrentPropertyListMixIn']
+
 
 # handy reference
 ArrayOfPropertyIdentifier = ArrayOf(PropertyIdentifier)

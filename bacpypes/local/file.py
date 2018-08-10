@@ -1,33 +1,25 @@
 #!/usr/bin/env python
 
-from ..debugging import bacpypes_debugging, ModuleLogger
-from ..capability import Capability
-
+import logging
 from ..object import FileObject
 
-from ..apdu import AtomicReadFileACK, AtomicReadFileACKAccessMethodChoice, \
-    AtomicReadFileACKAccessMethodRecordAccess, \
-    AtomicReadFileACKAccessMethodStreamAccess, \
-    AtomicWriteFileACK
-from ..errors import ExecutionError, MissingRequiredParameter
 
 # some debugging
-_debug = 0
-_log = ModuleLogger(globals())
+_debug = False
+_logger = logging.getLogger(__name__)
+__all__ = ['LocalRecordAccessFileObject', 'LocalStreamAccessFileObject']
 
 #
 #   Local Record Access File Object Type
 #
 
-@bacpypes_debugging
+
 class LocalRecordAccessFileObject(FileObject):
 
     def __init__(self, **kwargs):
         """ Initialize a record accessed file object. """
         if _debug:
-            LocalRecordAccessFileObject._debug("__init__ %r",
-                kwargs,
-                )
+            _logger.debug("__init__ %r", kwargs)
 
         # verify the file access method or provide it
         if 'fileAccessMethod' in kwargs:
@@ -55,15 +47,13 @@ class LocalRecordAccessFileObject(FileObject):
 #   Local Stream Access File Object Type
 #
 
-@bacpypes_debugging
+
 class LocalStreamAccessFileObject(FileObject):
 
     def __init__(self, **kwargs):
         """ Initialize a stream accessed file object. """
         if _debug:
-            LocalStreamAccessFileObject._debug("__init__ %r",
-                kwargs,
-                )
+            _logger.debug("__init__ %r", kwargs)
 
         # verify the file access method or provide it
         if 'fileAccessMethod' in kwargs:

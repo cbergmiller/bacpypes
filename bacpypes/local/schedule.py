@@ -4,11 +4,10 @@
 Local Schedule Object
 """
 
-import sys
+import logging
 import calendar
 from time import mktime as _mktime
 
-from ..debugging import bacpypes_debugging, ModuleLogger
 
 from ..core import deferred
 from ..task import OneShotTask
@@ -21,7 +20,7 @@ from .object import CurrentPropertyListMixIn
 
 # some debugging
 _debug = 0
-_log = ModuleLogger(globals())
+_log = logging.getLogger(__name__)
 
 #
 #   match_date
@@ -193,9 +192,9 @@ def match_weeknday(date, weeknday):
 #   date_in_calendar_entry
 #
 
-@bacpypes_debugging
+
 def date_in_calendar_entry(date, calendar_entry):
-    if _debug: date_in_calendar_entry._debug("date_in_calendar_entry %r %r", date, calendar_entry)
+    if _debug: _log.debug("date_in_calendar_entry %r %r", date, calendar_entry)
 
     match = False
     if calendar_entry.date:
@@ -206,7 +205,7 @@ def date_in_calendar_entry(date, calendar_entry):
         match = match_weeknday(date, calendar_entry.weekNDay)
     else:
         raise RuntimeError("")
-    if _debug: date_in_calendar_entry._debug("    - match: %r", match)
+    if _debug: _log.debug("    - match: %r", match)
 
     return match
 
@@ -231,11 +230,11 @@ def datetime_to_time(date, time):
 #   LocalScheduleObject
 #
 
-@bacpypes_debugging
+
 class LocalScheduleObject(CurrentPropertyListMixIn, ScheduleObject):
 
     def __init__(self, **kwargs):
-        if _debug: LocalScheduleObject._debug("__init__ %r", kwargs)
+        if _debug: _log.debug("__init__ %r", kwargs)
 
         # make sure present value was provided
         if 'presentValue' not in kwargs:
@@ -261,7 +260,7 @@ class LocalScheduleObject(CurrentPropertyListMixIn, ScheduleObject):
         one of its configuration properties has changed.  The new and old value
         parameters are ignored, this is called after the property has been
         changed and this is only concerned with the current value."""
-        if _debug: LocalScheduleObject._debug("_check_reliability %r %r", old_value, new_value)
+        if _debug: _log.debug("_check_reliability %r %r", old_value, new_value)
 
         try:
             schedule_default = self.scheduleDefault
@@ -272,7 +271,7 @@ class LocalScheduleObject(CurrentPropertyListMixIn, ScheduleObject):
                 raise TypeError("scheduleDefault must be an instance of an atomic type")
 
             schedule_datatype = schedule_default.__class__
-            if _debug: LocalScheduleObject._debug("    - schedule_datatype: %r", schedule_datatype)
+            if _debug: _log.debug("    - schedule_datatype: %r", schedule_datatype)
 
             if (self.weeklySchedule is None) and (self.exceptionSchedule is None):
                 raise ValueError("schedule required")
@@ -281,28 +280,28 @@ class LocalScheduleObject(CurrentPropertyListMixIn, ScheduleObject):
             if self.weeklySchedule:
                 for daily_schedule in self.weeklySchedule:
                     for time_value in daily_schedule.daySchedule:
-                        if _debug: LocalScheduleObject._debug("    - daily time_value: %r", time_value)
+                        if _debug: _log.debug("    - daily time_value: %r", time_value)
                         if time_value is None:
                             pass
                         elif not isinstance(time_value.value, (Null, schedule_datatype)):
-                            if _debug: LocalScheduleObject._debug("    - wrong type: expected %r, got %r",
+                            if _debug: _log.debug("    - wrong type: expected %r, got %r",
                                 schedule_datatype,
                                 time_value.__class__,
                                 )
                             raise TypeError("wrong type")
                         elif 255 in time_value.time:
-                            if _debug: LocalScheduleObject._debug("    - wildcard in time")
+                            if _debug: _log.debug("    - wildcard in time")
                             raise ValueError("must be a specific time")
 
             # check the exception schedule values
             if self.exceptionSchedule:
                 for special_event in self.exceptionSchedule:
                     for time_value in special_event.listOfTimeValues:
-                        if _debug: LocalScheduleObject._debug("    - special event time_value: %r", time_value)
+                        if _debug: _log.debug("    - special event time_value: %r", time_value)
                         if time_value is None:
                             pass
                         elif not isinstance(time_value.value, (Null, schedule_datatype)):
-                            if _debug: LocalScheduleObject._debug("    - wrong type: expected %r, got %r",
+                            if _debug: _log.debug("    - wrong type: expected %r, got %r",
                                 schedule_datatype,
                                 time_value.__class__,
                                 )
@@ -318,17 +317,17 @@ class LocalScheduleObject(CurrentPropertyListMixIn, ScheduleObject):
                     # get the datatype of the property to be written
                     obj_type = obj_prop_ref.objectIdentifier[0]
                     datatype = get_datatype(obj_type, obj_prop_ref.propertyIdentifier)
-                    if _debug: LocalScheduleObject._debug("    - datatype: %r", datatype)
+                    if _debug: _log.debug("    - datatype: %r", datatype)
 
                     if issubclass(datatype, Array) and (obj_prop_ref.propertyArrayIndex is not None):
                         if obj_prop_ref.propertyArrayIndex == 0:
                             datatype = Unsigned
                         else:
                             datatype = datatype.subtype
-                        if _debug: LocalScheduleObject._debug("    - datatype: %r", datatype)
+                        if _debug: _log.debug("    - datatype: %r", datatype)
 
                     if datatype is not schedule_datatype:
-                        if _debug: LocalScheduleObject._debug("    - wrong type: expected %r, got %r",
+                        if _debug: _log.debug("    - wrong type: expected %r, got %r",
                             datatype,
                             schedule_datatype,
                             )
@@ -336,21 +335,21 @@ class LocalScheduleObject(CurrentPropertyListMixIn, ScheduleObject):
 
             # all good
             self.reliability = 'noFaultDetected'
-            if _debug: LocalScheduleObject._debug("    - no fault detected")
+            if _debug: _log.debug("    - no fault detected")
 
         except Exception as err:
-            if _debug: LocalScheduleObject._debug("    - exception: %r", err)
+            if _debug: _log.debug("    - exception: %r", err)
             self.reliability = 'configurationError'
 
 #
 #   LocalScheduleInterpreter
 #
 
-@bacpypes_debugging
+
 class LocalScheduleInterpreter(OneShotTask):
 
     def __init__(self, sched_obj):
-        if _debug: LocalScheduleInterpreter._debug("__init__ %r", sched_obj)
+        if _debug: _log.debug("__init__ %r", sched_obj)
         OneShotTask.__init__(self)
 
         # reference the schedule object to update
@@ -366,17 +365,17 @@ class LocalScheduleInterpreter(OneShotTask):
         """This function is called when the presentValue of the local schedule
         object has changed, both internally by this interpreter, or externally
         by some client using WriteProperty."""
-        if _debug: LocalScheduleInterpreter._debug("present_value_changed %s %s", old_value, new_value)
+        if _debug: _log.debug("present_value_changed %s %s", old_value, new_value)
 
         # if this hasn't been added to an application, there's nothing to do
         if not self.sched_obj._app:
-            if _debug: LocalScheduleInterpreter._debug("    - no application")
+            if _debug: _log.debug("    - no application")
             return
 
         # process the list of [device] object property [array index] references
         obj_prop_refs = self.sched_obj.listOfObjectPropertyReferences
         if not obj_prop_refs:
-            if _debug: LocalScheduleInterpreter._debug("    - no writes defined")
+            if _debug: _log.debug("    - no writes defined")
             return
 
         # primitive values just set the value part
@@ -385,13 +384,13 @@ class LocalScheduleInterpreter(OneShotTask):
         # loop through the writes
         for obj_prop_ref in obj_prop_refs:
             if obj_prop_ref.deviceIdentifier:
-                if _debug: LocalScheduleInterpreter._debug("    - no externals")
+                if _debug: _log.debug("    - no externals")
                 continue
 
             # get the object from the application
             obj = self.sched_obj._app.get_object_id(obj_prop_ref.objectIdentifier)
             if not obj:
-                if _debug: LocalScheduleInterpreter._debug("    - no object")
+                if _debug: _log.debug("    - no object")
                 continue
 
             # try to change the value
@@ -402,37 +401,37 @@ class LocalScheduleInterpreter(OneShotTask):
                     arrayIndex=obj_prop_ref.propertyArrayIndex,
                     priority=self.sched_obj.priorityForWriting,
                     )
-                if _debug: LocalScheduleInterpreter._debug("    - success")
+                if _debug: _log.debug("    - success")
             except Exception as err:
-                if _debug: LocalScheduleInterpreter._debug("    - error: %r", err)
+                if _debug: _log.debug("    - error: %r", err)
 
     def process_task(self):
-        if _debug: LocalScheduleInterpreter._debug("process_task(%s)", self.sched_obj.objectName)
+        if _debug: _log.debug("process_task(%s)", self.sched_obj.objectName)
 
         # check for a valid configuration
         if self.sched_obj.reliability != 'noFaultDetected':
-            if _debug: LocalScheduleInterpreter._debug("    - fault detected")
+            if _debug: _log.debug("    - fault detected")
             return
 
         # get the date and time from the device object in case it provides
         # some custom functionality
         if self.sched_obj._app and self.sched_obj._app.localDevice:
             current_date = self.sched_obj._app.localDevice.localDate
-            if _debug: LocalScheduleInterpreter._debug("    - current_date: %r", current_date)
+            if _debug: _log.debug("    - current_date: %r", current_date)
 
             current_time = self.sched_obj._app.localDevice.localTime
-            if _debug: LocalScheduleInterpreter._debug("    - current_time: %r", current_time)
+            if _debug: _log.debug("    - current_time: %r", current_time)
         else:
             # get the current date and time, as provided by the task manager
             current_date = Date().now().value
-            if _debug: LocalScheduleInterpreter._debug("    - current_date: %r", current_date)
+            if _debug: _log.debug("    - current_date: %r", current_date)
 
             current_time = Time().now().value
-            if _debug: LocalScheduleInterpreter._debug("    - current_time: %r", current_time)
+            if _debug: _log.debug("    - current_time: %r", current_time)
 
         # evaluate the time
         current_value, next_transition = self.eval(current_date, current_time)
-        if _debug: LocalScheduleInterpreter._debug("    - current_value, next_transition: %r, %r", current_value, next_transition)
+        if _debug: _log.debug("    - current_value, next_transition: %r, %r", current_value, next_transition)
 
         ### set the present value
         self.sched_obj.presentValue = current_value
@@ -447,11 +446,11 @@ class LocalScheduleInterpreter(OneShotTask):
         """Evaluate the schedule according to the provided date and time and
         return the appropriate present value, or None if not in the effective
         period."""
-        if _debug: LocalScheduleInterpreter._debug("eval %r %r", edate, etime)
+        if _debug: _log.debug("eval %r %r", edate, etime)
 
         # reference the schedule object
         sched_obj = self.sched_obj
-        if _debug: LocalScheduleInterpreter._debug("    sched_obj: %r", sched_obj)
+        if _debug: _log.debug("    sched_obj: %r", sched_obj)
 
         # verify the date falls in the effective period
         if not match_date_range(edate, sched_obj.effectivePeriod):
@@ -468,7 +467,7 @@ class LocalScheduleInterpreter(OneShotTask):
         # check the exception schedule values
         if sched_obj.exceptionSchedule:
             for special_event in sched_obj.exceptionSchedule:
-                if _debug: LocalScheduleInterpreter._debug("    - special_event: %r", special_event)
+                if _debug: _log.debug("    - special_event: %r", special_event)
 
                 # check the special event period
                 special_event_period = special_event.period
@@ -478,40 +477,40 @@ class LocalScheduleInterpreter(OneShotTask):
                 match = False
                 calendar_entry = special_event_period.calendarEntry
                 if calendar_entry:
-                    if _debug: LocalScheduleInterpreter._debug("    - calendar_entry: %r", calendar_entry)
+                    if _debug: _log.debug("    - calendar_entry: %r", calendar_entry)
                     match = date_in_calendar_entry(edate, calendar_entry)
                 else:
                     # get the calendar object from the application
                     calendar_object = sched_obj._app.get_object_id(special_event_period.calendarReference)
                     if not calendar_object:
                         raise RuntimeError("invalid calendar object reference")
-                    if _debug: LocalScheduleInterpreter._debug("    - calendar_object: %r", calendar_object)
+                    if _debug: _log.debug("    - calendar_object: %r", calendar_object)
 
                     for calendar_entry in calendar_object.dateList:
-                        if _debug: LocalScheduleInterpreter._debug("    - calendar_entry: %r", calendar_entry)
+                        if _debug: _log.debug("    - calendar_entry: %r", calendar_entry)
                         match = date_in_calendar_entry(edate, calendar_entry)
                         if match:
                             break
 
                 # didn't match the period, try the next special event
                 if not match:
-                    if _debug: LocalScheduleInterpreter._debug("    - no matching calendar entry")
+                    if _debug: _log.debug("    - no matching calendar entry")
                     continue
 
                 # event priority array index
                 priority = special_event.eventPriority - 1
-                if _debug: LocalScheduleInterpreter._debug("    - priority: %r", priority)
+                if _debug: _log.debug("    - priority: %r", priority)
 
                 # look for all of the possible times
                 for time_value in special_event.listOfTimeValues:
                     tval = time_value.time
                     if tval <= etime:
                         if isinstance(time_value.value, Null):
-                            if _debug: LocalScheduleInterpreter._debug("    - relinquish exception @ %r", tval)
+                            if _debug: _log.debug("    - relinquish exception @ %r", tval)
                             event_priority[priority] = None
                             next_transition_time[priority] = None
                         else:
-                            if _debug: LocalScheduleInterpreter._debug("    - consider exception @ %r", tval)
+                            if _debug: _log.debug("    - consider exception @ %r", tval)
                             event_priority[priority] = time_value.value
                             next_transition_time[priority] = next_day
                     else:
@@ -526,7 +525,7 @@ class LocalScheduleInterpreter(OneShotTask):
             if next_transition is not None:
                 earliest_transition = min(earliest_transition, next_transition)
             if priority_value is not None:
-                if _debug: LocalScheduleInterpreter._debug("    - priority_value: %r", priority_value)
+                if _debug: _log.debug("    - priority_value: %r", priority_value)
                 return priority_value, earliest_transition
 
         # start out with the default
@@ -535,19 +534,19 @@ class LocalScheduleInterpreter(OneShotTask):
         # check the daily schedule
         if sched_obj.weeklySchedule:
             daily_schedule = sched_obj.weeklySchedule[edate[3]]
-            if _debug: LocalScheduleInterpreter._debug("    - daily_schedule: %r", daily_schedule)
+            if _debug: _log.debug("    - daily_schedule: %r", daily_schedule)
 
             # look for all of the possible times
             for time_value in daily_schedule.daySchedule:
-                if _debug: LocalScheduleInterpreter._debug("    - time_value: %r", time_value)
+                if _debug: _log.debug("    - time_value: %r", time_value)
 
                 tval = time_value.time
                 if tval <= etime:
                     if isinstance(time_value.value, Null):
-                        if _debug: LocalScheduleInterpreter._debug("    - back to normal @ %r", tval)
+                        if _debug: _log.debug("    - back to normal @ %r", tval)
                         daily_value = sched_obj.scheduleDefault
                     else:
-                        if _debug: LocalScheduleInterpreter._debug("    - new value @ %r", tval)
+                        if _debug: _log.debug("    - new value @ %r", tval)
                         daily_value = time_value.value
                 else:
                     earliest_transition = min(earliest_transition, tval)
